@@ -123,6 +123,16 @@ button,select,input{font:inherit;color:inherit}
 .sizer input[type=range]{flex:1 1 140px;min-width:0;accent-color:var(--raise)}
 .sizer input[type=number]{width:78px;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:4px 6px;font-family:var(--ff-num)}
 .wait{color:var(--muted)}
+.verdict{display:flex;gap:8px;align-items:flex-start;font-size:13px;line-height:1.45;padding:6px 10px;border-radius:8px;background:var(--panel2);border-left:3px solid var(--dim)}
+.verdict .vi{font-weight:700;font-size:16px;line-height:1.25;flex:none}
+.verdict b{font-weight:700}
+.verdict.lv-best{border-left-color:var(--call)}.verdict.lv-best .vi{color:var(--call)}
+.verdict.lv-ok{border-left-color:var(--brass)}.verdict.lv-ok .vi{color:var(--brass)}
+.verdict.lv-meh{border-left-color:#e08a3a}.verdict.lv-meh .vi{color:#e08a3a}
+.verdict.lv-bad{border-left-color:var(--raise)}.verdict.lv-bad .vi{color:var(--raise)}
+.mini{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+.mini .fbar{height:8px}
+.hs{font-size:13px;color:var(--muted)}
 .res{font-size:16px}.res b{font-family:var(--ff-num);font-size:20px}
 
 /* panels */
@@ -802,12 +812,13 @@ function renderAction(){
   const el=$('#actionbar'),p=P[0];
   if(G.over){
     const net=P[0].stack-START;
-    el.innerHTML=`<div class="res">本手你${net>0?'<span class="pos">赢了</span>':net<0?'<span class="neg">输了</span>':'持平'} <b>${fmt(Math.abs(net))}</b> bb</div><div class="acts"><button class="btn primary" id="nextBtn">下一手</button></div>`;
+    const hs=G.decisions.length?Math.round(G.decisions.reduce((a,d)=>a+d.rating.score,0)/G.decisions.length*100):null;
+    el.innerHTML=`<div class="res">本手你${net>0?'<span class="pos">赢了</span>':net<0?'<span class="neg">输了</span>':'持平'} <b>${fmt(Math.abs(net))}</b> bb${hs!=null?` <span class="hs">· 决策得分 ${hs}%</span>`:''}</div>${verdictHTML()}<div class="acts"><button class="btn primary" id="nextBtn">下一手</button></div>`;
     $('#nextBtn').onclick=newHand;return;
   }
   if(G.toAct!==0){
     const q=G.toAct>=0?P[G.toAct]:null;
-    el.innerHTML=`<div class="wait">${q?`等待 ${who(q)} 行动…`:'发牌中…'}</div>${p.folded?'<div class="acts"><button class="btn ghost" id="ffBtn">快进到本手结束</button></div>':''}`;
+    el.innerHTML=`${verdictHTML()}<div class="wait">${q?`等待 ${who(q)} 行动…`:'发牌中…'}</div>${p.folded?'<div class="acts"><button class="btn ghost" id="ffBtn">快进到本手结束</button></div>':''}`;
     const ff=$('#ffBtn');if(ff)ff.onclick=()=>{G.fast=true;clearTimeout(G.timer);if(G.toAct>=0)botMove(G.toAct);else endStreet();};
     return;
   }
@@ -815,7 +826,7 @@ function renderAction(){
   const others=P.some(q=>q!==p&&!q.folded&&!q.allIn);
   const canRaise=p.stack>toCall&&others&&G.currentBet<max;
   const eff=Math.min(p.stack,Math.max(0,...P.filter(q=>q!==p&&!q.folded).map(q=>q.stack)));
-  let h=`<div class="info"><span>轮到你 · ${posLabel(p.pos)}</span><span>底池 <b>${fmt(potTotal())}</b></span><span>需跟注 <b>${fmt(toCall)}</b></span><span>有效筹码 <b>${fmt(eff)}</b></span></div><div class="acts">`;
+  let h=`<div class="info"><span>轮到你 · ${posLabel(p.pos)}</span><span>底池 <b>${fmt(potTotal())}</b></span><span>需跟注 <b>${fmt(toCall)}</b></span><span>有效筹码 <b>${fmt(eff)}</b></span></div>${verdictHTML()}${miniHTML()}<div class="acts">`;
   if(toCall>0)h+=`<button class="btn fold" id="bFold">弃牌</button>`;
   h+=toCall>0?`<button class="btn call" id="bCall">${p.stack<=toCall?'跟注全下':'跟注'} ${fmt(toCall)}</button>`:`<button class="btn call" id="bCheck">过牌</button>`;
   if(canRaise)h+=`<button class="btn raise" id="bRaise"></button>`;
@@ -836,6 +847,17 @@ function renderAction(){
     el.querySelectorAll('.pre').forEach(b=>b.onclick=()=>setTo(+b.dataset.to));
     br.onclick=()=>userAct(G.currentBet===0?'bet':'raise',G.uiTo);
   }
+}
+function verdictHTML(){
+  const d=G.feedback;if(!d||!G.decisions.length)return'';
+  const icon={best:'✓',ok:'✓',meh:'!',bad:'✗'}[d.rating.lvl];
+  const tail=d.rating.lvl==='best'?'':` · GTO 主选 <b>${d.best}</b>`;
+  return `<div class="verdict lv-${d.rating.lvl}"><span class="vi">${icon}</span><span>上一步 <b>${d.chose}</b>：${d.rating.txt}（GTO ${pc(d.f)}）${tail}${d.note?' · '+d.note:''}</span></div>`;
+}
+function miniHTML(){
+  if(!G.cur||!G.showAdvice)return'';
+  const o=G.cur.opts;
+  return `<div class="mini"><div class="fbar">${o.filter(x=>x.f>0.001).map(x=>`<span class="f-${x.t}" style="width:${x.f*100}%"></span>`).join('')}</div><span>GTO：${o.map(x=>`${x.label.replace(/（.*）/,'')} ${pc(x.f)}`).join(' · ')}</span></div>`;
 }
 function fbHTML(d){
   if(!d)return'';
@@ -893,7 +915,7 @@ function renderAdvice(){
     const kind=G.street===0?'翻前 · 求解器范围近似':'翻后 · 启发式近似';
     let h=`<h2>GTO 建议 <span class="kind">${kind}</span></h2>`;
     if(G.feedback&&G.feedback.street===G.street&&G.decisions.length)h+=`<div class="line"><span class="lbl">上一步</span></div>`+fbHTML(G.feedback);
-    if(!G.showAdvice){h+=`<div class="quiz"><p class="sit">${G.cur.sit}</p><span>测验模式：先在下方做出你的决定，再看 GTO 怎么打。</span><button class="btn ghost" id="peek">现在就看建议</button></div>`;el.innerHTML=h;$('#peek').onclick=()=>{G.showAdvice=true;renderAdvice();};return;}
+    if(!G.showAdvice){h+=`<div class="quiz"><p class="sit">${G.cur.sit}</p><span>测验模式：先在下方做出你的决定，再看 GTO 怎么打。</span><button class="btn ghost" id="peek">现在就看建议</button></div>`;el.innerHTML=h;$('#peek').onclick=()=>{G.showAdvice=true;render();};return;}
     el.innerHTML=h+adviceBody(G.cur);return;
   }
   if(G.lastAdvice){el.innerHTML=`<h2>上一步分析 <span class="kind">${G.lastAdvice.street===0?'翻前 · 求解器范围近似':'翻后 · 启发式近似'}</span></h2>${fbHTML(G.feedback)}${adviceBody(G.lastAdvice)}`;return;}
@@ -908,7 +930,7 @@ function initSettings(){
   const sp=$('#setPos'),sm=$('#setMode'),ss=$('#setSpeed');
   sp.value=SETTINGS.pos;sm.value=SETTINGS.mode;ss.value=SETTINGS.speed;
   sp.onchange=()=>{SETTINGS.pos=sp.value;save('gto9-settings',SETTINGS);};
-  sm.onchange=()=>{SETTINGS.mode=sm.value;save('gto9-settings',SETTINGS);if(G.toAct===0&&!G.over){G.showAdvice=SETTINGS.mode==='live';renderAdvice();}};
+  sm.onchange=()=>{SETTINGS.mode=sm.value;save('gto9-settings',SETTINGS);if(G.toAct===0&&!G.over){G.showAdvice=SETTINGS.mode==='live';render();}};
   ss.onchange=()=>{SETTINGS.speed=ss.value;save('gto9-settings',SETTINGS);};
   let rt;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{if(P.length)renderTable();},80);});
 }
