@@ -396,9 +396,15 @@ const T={
     R('','')
   ],
   VS_OPEN:{
+    // cold callers in LJ/HJ/CO still have players behind them (squeeze risk, blinds join cheaply): mostly 3bet or fold
+    ipMid:[
+      R('QQ+,AKs,AKo,AQs:0.6,JJ:0.4,KQs:0.4,A5s-A4s:0.4','JJ:0.5,TT-88:0.5,77:0.3,AQs:0.4,AJs:0.4,KQs:0.4,QJs:0.2,JTs:0.2'),
+      R('JJ+,AKs,AKo,AQs,AQo:0.8,AJs:0.6,KQs:0.6,A5s-A3s:0.5,TT:0.5,KJs:0.3,QJs:0.2,AJo:0.3,KQo:0.3,ATs:0.3','TT:0.5,99-66:0.5,AJs:0.4,ATs:0.4,KJs:0.5,QJs:0.5,JTs:0.5,T9s:0.3,AQo:0.2'),
+      R('TT+,AQs+,AKo,AQo:0.5,AJs:0.5,A5s-A2s:0.5,KJs:0.5,KQs:0.5,K9s:0.3,QJs:0.3,76s:0.3,65s:0.3','99-22,AJs:0.5,ATs-A6s,KTs+,QTs+,J9s+,T9s,98s,87s,AJo,KQo,AQo:0.5,ATo:0.4')
+    ],
     ip:[
       R('QQ+,AKs,AKo:0.7,A5s:0.3','JJ-77,66:0.5,AQs-ATs,KQs,KJs,QJs,JTs,T9s:0.5,AQo:0.5,AKo:0.3'),
-      R('QQ+,AKs,AKo,AQs:0.5,A5s-A4s:0.5,KQs:0.3','JJ-55,AQs:0.5,AJs-ATs,KJs+,QJs,JTs,T9s,98s:0.5,AQo,AJo:0.3,KQo:0.3'),
+      R('QQ+,AKs,AKo,AQs:0.5,A5s-A4s:0.5,KQs:0.3,AQo:0.5,AJs:0.3','JJ-55,AQs:0.5,AJs:0.7,ATs,KJs+,QJs,JTs,T9s,98s:0.5,AQo:0.5,AJo:0.3,KQo:0.3'),
       R('TT+,AQs+,AKo,AQo:0.5,AJs:0.5,A5s-A2s:0.5,KJs:0.5,KQs:0.5,K9s:0.3,QJs:0.3,76s:0.3,65s:0.3','99-22,AJs:0.5,ATs-A6s,KTs+,QTs+,J9s+,T9s,98s,87s,AJo,KQo,AQo:0.5,ATo:0.4')
     ],
     sb:[
@@ -498,7 +504,9 @@ function texture(B){
   const sc=[0,0,0,0];let mask=0;for(const c of B){sc[c&3]++;mask|=1<<(c>>2);}
   const ms=Math.max(...sc),paired=B.length>popc(mask);
   let conn=0;for(let lo=-1;lo<=8;lo++){let n=0;for(let r=lo;r<lo+5;r++)if(mask>>(r<0?12:r)&1)n++;conn=Math.max(conn,n);}
-  const wet=ms>=3||conn>=3||(ms===2&&conn>=2&&B.length===3);
+  let high=0;for(let r=8;r<=12;r++)if(mask>>r&1)high++;
+  // flush draws plus connected broadway cards make a board wet; a low two-tone board like 8-4-2 stays fairly dry
+  const wet=ms>=3||conn>=3||(ms===2&&conn>=2&&high>=2);
   const parts=[wet?'湿润':'干燥',ms>=3?'同花面':ms===2?'两色':'彩虹'];if(conn>=3)parts.push('连张');if(paired)parts.push('对子面');
   return{wet,label:parts.join(' · ')};
 }
@@ -580,7 +588,7 @@ function pfContext(pi){
     if(G.isoLimpers>0)return approxCtx(pi,'vsIso');
     const std=op.pos===7?30:25,ratio=G.raiseTo[0]/std;
     if(ratio>=1.5||ratio<=0.85)return approxCtx(pi,'vsOddOpen');
-    const tier=tierOf(op.pos),type=pos===8?'bb':pos===7?'sb':'ip';
+    const tier=tierOf(op.pos),type=pos===8?'bb':pos===7?'sb':pos===6?'ip':'ipMid';
     return{kind:'vsOpen',tier,type,op:op.i,tbl:T.VS_OPEN[type][tier]};
   }
   if(lvl===2){
@@ -752,7 +760,9 @@ function preReasons(ctx,k,fr,rp,cp,p){
       if(ctx.tier===0)out.push('前位开池的范围很强，你继续的范围也要相应收紧。');
       if(ctx.type==='bb')out.push('大盲已投入 1bb，跟注价格便宜，所以防守范围最宽。');
       if(ctx.type==='sb')out.push('小盲翻后没有位置，后面还有大盲，以 3bet 或弃牌为主，很少平跟。');
-      if(ctx.type==='ip'&&G.callers>0)out.push(`已经有 ${G.callers} 人跟注，3bet 尺度要相应加大。`);
+      if(ctx.type==='ipMid'){const bh=P.filter(q=>q!==p&&!q.folded&&!q.acted).length;out.push(`你后面还有 ${bh} 人没行动。平跟容易被后面的人挤压（squeeze），还会让盲注便宜入池变成多人底池，所以 GTO 在这里以 3bet 或弃牌为主，平跟只用少量中小对子和同花高张。`);}
+      if(ctx.type==='ip')out.push('你在庄位，翻后一定有位置，后面只剩盲注，所以可以比其他位置多平跟一些牌。');
+      if((ctx.type==='ip'||ctx.type==='ipMid')&&G.callers>0)out.push(`已经有 ${G.callers} 人跟注，3bet 尺度要相应加大。`);
       break;}
     case 'vs3o':out.push(`你开池后被 3bet：4bet 约 ${rp}%，跟注约 ${cp}%。${nm} ${verdict}。`);out.push('被 3bet 后，大部分边缘开池牌要放弃，否则会被对手剥削。');break;
     case 'vs3c':out.push(`前面已经有加注和 3bet，冷跟和冷 4bet 的范围非常窄（合计约 ${Math.round((rp+cp)*10)/10}%）。${nm} ${verdict}。`);break;
@@ -794,7 +804,9 @@ function advisePost(pi,iters,detail){
   const why=[];let o,opts,potOdds=null,mdf=null,size=null,rsize=null;
   if(toCall===0){
     const vT=n===1?0.6:n===2?0.45:0.36,sT=vT+0.17;let kind;
-    if(eq>=sT){kind='value';o={bet:.85,check:.15};why.push('胜率很高，主要用价值下注，从对手更差的牌里拿钱。');if(!tex.wet&&!river)why.push('干燥牌面可以偶尔过牌慢打，平衡你的过牌范围。');}
+    const cb=agg&&street===1&&n===1&&eq<sT?cbetPlan(p,B,tex,eq,vT,cl,ip):null;
+    if(cb){kind='cbet';o=cb.o;why.push(...cb.why);}
+    else if(eq>=sT){kind='value';o={bet:.85,check:.15};why.push('胜率很高，主要用价值下注，从对手更差的牌里拿钱。');if(!tex.wet&&!river)why.push('干燥牌面可以偶尔过牌慢打，平衡你的过牌范围。');}
     else if(eq>=vT){kind='thin';o={bet:.6,check:.4};why.push('牌力领先但不算坚果，以薄价值下注为主，也可以过牌控池。');}
     else if(eq>=vT-0.18){
       if(agg&&street===1&&n===1&&!tex.wet){kind='cbet';o={bet:.55,check:.45};why.push('你是翻前进攻者，干燥牌面你的范围更强，可以小注高频持续下注。');}
@@ -806,7 +818,7 @@ function advisePost(pi,iters,detail){
       else if(!river&&b==='weakdraw'){kind='bluff';o={check:.7,bet:.3};why.push('只有卡顺这类弱听牌，偶尔诈唬，多数时候过牌。');}
       else if(agg&&n===1&&street===1&&!tex.wet){kind='cbet';o={bet:.45,check:.55};why.push('牌很弱，但作为翻前进攻者在干燥牌面可以小注做范围性持续下注，对手会弃掉很多牌。');}
       else if(river&&agg&&n===1){kind='bluff';o={check:.75,bet:.25};why.push('没有摊牌价值，可以拿少部分这样的牌诈唬，其余放弃。');}
-      else{kind='bluff';o=n>=2?{check:1}:{check:.9,bet:.1};why.push(n>=2?'多人底池里弱牌诈唬很难成功，应该过牌。':'牌力弱、也没有主动权，以过牌为主。');}
+      else{kind='bluff';o=n>=2?{check:1}:{check:.9,bet:.1};why.push(n>=2?'多人底池里弱牌诈唬很难成功，应该过牌。':agg?'你是上一条街的进攻者，但这手牌现在既没中也没有听牌，继续诈唬时被跟注就几乎没有改进机会。以过牌为主，免费看下一张牌。':'牌力弱、也没有主动权，以过牌为主。');}
     }
     const prevAgg=G.aggr[street-1]>=0?P[G.aggr[street-1]]:null;
     if(prevAgg&&prevAgg!==p&&!prevAgg.folded&&!prevAgg.allIn&&order(prevAgg.i)>order(pi)&&G.nb===0){
@@ -816,7 +828,7 @@ function advisePost(pi,iters,detail){
     // bluffs and semi-bluffs need everyone to fold: rarer with more opponents, and never as a big all-in into a crowd
     if((kind==='bluff'||kind==='semi')&&n>=2){const keep=kind==='semi'?(n===2?0.6:0.3):(n===2?0.35:0);o={bet:(o.bet||0)*keep};o.check=1-o.bet;
       why.push(`这是 ${n+1} 人底池，${kind==='semi'?'半诈唬':'诈唬'}要让所有人都弃牌才成功，所以比单挑时少下注${keep===0?'，这里直接过牌':''}。`);}
-    size=chooseSize(kind,{pot,eff,street,river,n,tex,eq,spr,max});
+    size=chooseSize(kind,{pot,eff,street,river,n,tex,eq,spr,max,pot3:G.raiseLevel>=2});
     if((kind==='bluff'||kind==='semi')&&size.allin&&n>=2){o={bet:(o.bet||0)*0.3};o.check=1-o.bet;}
     const to=size.to;
     opts=[{t:'check',f:o.check||0,label:'过牌'}];
@@ -867,6 +879,29 @@ function rangeDist(q,dead){
 function computeAdvice(pi,iters,detail){return G.street===0?advisePre(pi):advisePost(pi,iters,detail);}
 
 
+
+// Flop continuation bet plan for the heads-up preflop aggressor without a strong made hand.
+// Frequency comes from who holds the range advantage (3bet pot, board height, texture), then is adjusted for this hand.
+function cbetPlan(p,B,tex,eq,vT,cl,ip){
+  const pot3=G.raiseLevel>=2,hiB=Math.max(...B.map(c=>c>>2)),high=hiB>=10,low=hiB<=7;
+  let base=pot3?(tex.wet?0.6:0.85):(tex.wet?0.45:(high?0.75:0.55));
+  if(!ip)base*=0.85;
+  const why=[];
+  if(pot3)why.push(`这是 3bet 底池，你是翻前最后加注的人。你的范围里有很多超对和 AK，对手跟注 3bet 的范围主要是中对子和同花高张${low?'；在这种低牌面上，超对大多在你手里，对手很难中到强牌':''}。所以 GTO ${tex.wet?'仍然经常':'几乎用整个范围'}持续下注。`);
+  else if(tex.wet)why.push('你是翻前加注者，但湿润牌面上对手的跟注范围连得更好，持续下注频率要降低。');
+  else if(high)why.push('你是翻前加注者，这种有大牌的干燥牌面对你的范围更有利（AK、AQ、大对子更多），可以小注高频持续下注。');
+  else why.push('你是翻前加注者，干燥牌面仍然偏向你的范围，但低牌对跟注方也不差，持续下注频率中等。');
+  const r1=p.hole[0]>>2,r2=p.hole[1]>>2,over=Math.min(r1,r2)>hiB,aceOver=Math.max(r1,r2)===12&&12>hiB;
+  let bdf=false;for(let s=0;s<4;s++){const hs=((p.hole[0]&3)===s?1:0)+((p.hole[1]&3)===s?1:0);let bs=0;for(const c of B)if((c&3)===s)bs++;if(hs>=1&&hs+bs===3)bdf=true;}
+  const b=cl.b;let f;
+  if(b==='strongdraw'||b==='draw'){f=Math.min(0.9,base+0.15);why.push('你有听牌：现在下注能让对手弃牌，被跟注后还有补牌。');}
+  else if(eq>=vT||b==='good'||b==='medium'){f=Math.min(0.9,base*0.8);why.push('你的牌有一定价值：一部分下注拿薄价值、保护手牌，一部分过牌控制底池。');}
+  else if(b==='weak'){f=base*0.6;why.push('弱对子有一点摊牌价值，下注频率比空气低一些。');}
+  else if(over||bdf||aceOver){f=base;const bits=[];if(over)bits.push('两张高张，转牌河牌中了就是顶对');else if(aceOver)bits.push('有一张 A，转牌河牌中 A 就是顶对');if(bdf)bits.push('还有后门同花听牌');why.push(`这手牌${bits.join('，')}，是很好的持续下注诈唬牌：被跟注后还有改进机会。`);}
+  else{f=base*0.55;why.push('完全没有后门听牌的空气，下注频率低一些，留一部分在过牌里。');}
+  return{o:{bet:f,check:1-f},why};
+}
+
 /* ================= bet sizing (with reasons) ================= */
 const SIZE_LIST=[0.33,0.5,0.75,1,1.5];
 function chooseSize(kind,c){
@@ -879,8 +914,10 @@ function chooseSize(kind,c){
     }else if(kind==='thin'){f=0.33;R.push('这是河牌的薄价值：比你好的牌会跟，比你差的牌只有一部分会跟。小注能让对手更多较差的牌（弱对子、A 高）跟注；下大了，基本只有比你好的牌才跟。');}
     else{f=0.75;R.push('河牌诈唬要和价值下注用同一个尺度，否则对手能从尺度看出你在诈唬。');R.push('75% 底池时，你的诈唬只要对手弃牌超过 43% 就不亏；按 GTO 比例，你的下注范围里大约 30% 可以是诈唬。');}
   }else if(kind==='cbet'){
-    f=0.33;R.push('翻前你是加注者，在干燥牌面上你的范围比对手强：超对和高张更多，对手大部分牌完全没中。');
-    R.push('这种局面 GTO 用小注、高频率下注：33% 底池就能逼对手弃掉大量空气，诈唬只要对手弃牌超过 25% 就不亏，而且你几乎可以用整个范围下注。');
+    if(c.tex.wet){f=0.5;R.push('湿润牌面上对手的范围连得更好，持续下注的频率要降低；下注时用 50% 左右，让听牌跟注付出代价。');}
+    else if(c.pot3){f=0.25;R.push('3bet 底池里底池已经很大，剩余筹码相对少（SPR 低）。持续下注用 25% 左右就够了：对手的空气和小对子面对任何尺度都难继续，小注让你几乎整个范围都能下，成本也低。');}
+    else{f=0.33;R.push('翻前你是加注者，在干燥牌面上你的范围比对手强：超对和高张更多，对手大部分牌完全没中。');
+      R.push('这种局面 GTO 用小注、高频率下注：33% 底池就能逼对手弃掉大量空气，诈唬只要对手弃牌超过 25% 就不亏，而且你几乎可以用整个范围下注。');}
   }else if(kind==='value'&&c.n>=2){
     f=c.tex.wet?0.5:0.33;
     R.push(`这是 ${c.n+1} 人底池。你的价值来自几个对手各自的跟注，中等偏小的尺度能让更多人用较差的牌继续；而且人多时至少有一人中牌的概率高，下太大容易只被更好的牌跟注。`);
@@ -1607,8 +1644,15 @@ function renderOpp(){
 
 /* ================= version & changelog ================= */
 // Newest first. Each update: bump APP_VERSION and add an entry at the top.
-const APP_VERSION='1.5.0';
+const APP_VERSION='1.5.1';
 const CHANGELOG=[
+  {v:'1.5.1',date:'2026-10-25',items:[
+    ['修复','LJ、HJ、CO 面对开池时平跟太多、3bet 太少（例如 HJ 的 AQo 被判为纯跟注）：这些位置后面还有人，现在以 3bet 或弃牌为主；庄位仍保留较多平跟。'],
+    ['修复','翻牌持续下注没有考虑谁是翻前进攻者、谁有范围优势：现在 3bet 底池和有大牌的干燥牌面上，进攻方会小注高频持续下注，理由里会说明这手牌有没有高张和后门听牌。'],
+    ['修复','8-4-2 两色这类低牌面被判为"湿润"。'],
+    ['改进','3bet 底池里的持续下注尺度改为 25% 左右。'],
+    ['修复','转牌作为进攻方放弃诈唬时，理由误写成"没有主动权"。']
+  ]},
   {v:'1.5.0',date:'2026-10-25',items:[
     ['新增','一键复制这手牌：动作记录、程序在每一步的建议和理由、你的选择，都整理成一段可以直接粘贴给 AI 的提问。'],
     ['新增','紧弱 AI：玩的牌少，很少加注，翻后没中就弃，被加注就害怕。'],
