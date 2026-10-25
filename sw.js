@@ -1,4 +1,4 @@
-const CACHE='gto9-v4';
+const CACHE='gto9-v5';
 const CORE=['./','index.html','admin.html','manifest.webmanifest','icon-180.png','icon-192.png','icon-512.png',
   'firebase-app-compat.js','firebase-auth-compat.js','firebase-firestore-compat.js','firebase-config.js'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting()));});

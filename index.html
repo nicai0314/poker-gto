@@ -138,6 +138,10 @@ button,select,input{font:inherit;color:inherit}
 .mini{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
 .mini .fbar{height:8px}
 .hs{font-size:13px;color:var(--muted)}
+.warnbox{background:rgba(224,138,58,.12);border:1px solid rgba(224,138,58,.45);color:#f0c49a;border-radius:9px;padding:8px 10px;font-size:13px}
+.verdict.lv-na{border-left-color:var(--dim)}.verdict.lv-na .vi{color:var(--muted)}
+.fb.lv-na{border-left-color:var(--dim)}.fb.lv-na .badge{color:var(--muted)}
+.rv.lv-na{color:var(--muted)}
 .optbtn{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:5px 10px;font-size:13px;color:var(--fg);cursor:pointer;text-align:left;max-width:15em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .optbtn:focus-visible{outline:2px solid var(--brass);outline-offset:1px}
 .sty{display:inline-block;font-family:var(--ff-body);font-size:10px;line-height:1.5;padding:0 5px;border-radius:4px;font-weight:700;vertical-align:1px}
@@ -531,7 +535,7 @@ function newHand(){
   const deck=[...Array(52).keys()];shuffle(deck);
   P=NAMES.map((nm,i)=>({i,name:nm,isUser:i===0,stack:START,bet:0,total:0,folded:false,allIn:false,acted:false,
     hole:[deck.pop(),deck.pop()],pos:OFF2POS[(i-buttonSeat+9)%9],style:i===0?'gto':(SETTINGS.styles[i-1]||'gto'),last:'',lastT:'',pfW:new Float32Array(169).fill(1),combos:null}));
-  G={button:buttonSeat,deck,board:[],street:0,currentBet:0,minRaise:BB,raiseLevel:0,raisers:[],limpers:[],callers:0,aggr:[-1,-1,-1,-1],
+  G={button:buttonSeat,deck,board:[],street:0,currentBet:0,minRaise:BB,raiseLevel:0,raisers:[],raiseTo:[],isoLimpers:0,eqCache:{},limpers:[],callers:0,aggr:[-1,-1,-1,-1],
     toAct:-1,nb:0,over:false,log:(G.log||[]).slice(-120),decisions:[],lastAdvice:null,feedback:null,fast:false,result:null,showAdvice:SETTINGS.mode==='live',handNo:curStats().hands+1,cur:null,uiTo:0,hv:false,hp:false};
   const sb=P[(buttonSeat+1)%9],bb=P[(buttonSeat+2)%9];
   put(sb,5);put(bb,10);sb.last='小盲 0.5';bb.last='大盲 1';G.currentBet=10;
@@ -541,18 +545,81 @@ function newHand(){
 }
 
 function pfContext(pi){
-  const p=P[pi],pos=p.pos,lvl=G.raiseLevel,toCall=G.currentBet-p.bet;
-  if(lvl>=1&&toCall>0&&G.currentBet>=0.35*START)return{kind:'jam',tbl:T.VS5};
+  const p=P[pi],pos=p.pos,lvl=G.raiseLevel,toCall=G.currentBet-p.bet,cb=G.currentBet;
+  // Spot types: unopened / limped pot / facing open / facing iso-raise / facing 3bet / facing 4bet+.
+  // Spots without a standard (solver-style) table are flagged approx: shown with a warning and not scored.
+  if(lvl>=1&&toCall>0&&cb>=0.35*START){
+    if(lvl<=2)return approxCtx(pi,'jam');
+    return{kind:'vs5',tbl:T.VS5};
+  }
   if(lvl===0){
     if(G.limpers.length===0)return{kind:'rfi',tbl:T.RFI[pos]};
-    if(pos===8)return{kind:'limpBB',tbl:T.LIMP_BB};
-    if(pos===7)return{kind:'limpSB',tbl:T.LIMP_SB};
-    return{kind:'iso',tbl:{r:T.RFI[Math.max(0,pos-2)].r,c:EMPTY}};
+    if(pos===8)return{kind:'limpBB',approx:true,tbl:T.LIMP_BB};
+    if(pos===7)return{kind:'limpSB',approx:true,tbl:T.LIMP_SB};
+    return{kind:'iso',approx:true,tbl:{r:T.RFI[Math.max(0,pos-2)].r,c:EMPTY}};
   }
-  if(lvl===1){const op=P[G.raisers[0]];const tier=tierOf(op.pos),type=pos===8?'bb':pos===7?'sb':'ip';return{kind:'vsOpen',tier,type,op:op.i,tbl:T.VS_OPEN[type][tier]};}
-  if(lvl===2){if(G.raisers[0]===pi)return{kind:'vs3o',tb:G.raisers[1],tbl:T.VS3O[tierOf(pos)]};return{kind:'vs3c',tb:G.raisers[1],tbl:T.VS3C};}
-  if(lvl===3){if(G.raisers[1]===pi)return{kind:'vs4',tbl:T.VS4};return{kind:'vs4c',tbl:T.VS4C};}
+  if(lvl===1){
+    const op=P[G.raisers[0]];
+    if(G.isoLimpers>0)return approxCtx(pi,'vsIso');
+    const std=op.pos===7?30:25,ratio=G.raiseTo[0]/std;
+    if(ratio>=1.5||ratio<=0.85)return approxCtx(pi,'vsOddOpen');
+    const tier=tierOf(op.pos),type=pos===8?'bb':pos===7?'sb':'ip';
+    return{kind:'vsOpen',tier,type,op:op.i,tbl:T.VS_OPEN[type][tier]};
+  }
+  if(lvl===2){
+    const open=G.raiseTo[0],r3=G.raiseTo[1]/open;
+    if(G.isoLimpers>0||r3>=5.5||r3<2.2)return approxCtx(pi,'vs3Odd');
+    if(G.raisers[0]===pi)return{kind:'vs3o',tb:G.raisers[1],tbl:T.VS3O[tierOf(pos)]};
+    return{kind:'vs3c',tb:G.raisers[1],tbl:T.VS3C};
+  }
+  if(lvl===3){
+    const r4=G.raiseTo[2]/G.raiseTo[1];
+    if(r4>=3.2)return approxCtx(pi,'vs4Odd');
+    if(G.raisers[1]===pi)return{kind:'vs4',tbl:T.VS4};
+    return{kind:'vs4c',tbl:T.VS4C};
+  }
   return{kind:'vs5',tbl:T.VS5};
+}
+/* ---- approximate preflop model for spots without a standard table ----
+   For every hand class: equity vs the last raiser's estimated range (Monte Carlo),
+   discounted by how much of that equity is realised (position, suitedness, players still to act),
+   then compared with the price of calling. Strong hands vs that range re-raise. */
+function stillToAct(pi){const r=G.raisers[G.raisers.length-1];return P.filter(q=>q.i!==pi&&q.i!==r&&!q.folded&&!q.allIn&&(!q.acted||q.bet<G.currentBet)).length;}
+function raiserEq(ri){
+  const key=ri+':'+G.raiseTo.length;
+  if(G.eqCache[key])return G.eqCache[key];
+  const rc=buildCombos(P[ri].pfW,false),out=new Float32Array(169);
+  for(let k=0;k<169;k++){
+    const i=Math.floor(k/13),j=k%13,r1=12-i,r2=12-j;
+    const h=i===j?[r1*4,r1*4+1]:i<j?[r1*4,r2*4]:[r2*4,r1*4+1];
+    out[k]=equityMC(h,[],[rc],220);
+  }
+  return G.eqCache[key]=out;
+}
+function approxCtx(pi,sub){
+  const p=P[pi],ri=G.raisers[G.raisers.length-1],R=P[ri];
+  const toCall=Math.min(G.currentBet-p.bet,p.stack),pot=potTotal();
+  const need=toCall/(pot+toCall),behind=stillToAct(pi);
+  const ip=order(pi)>order(ri),allin=R.allIn||toCall>=p.stack;
+  const eqA=raiserEq(ri);
+  const tR=0.6+0.02*behind;
+  const r=new Float32Array(169),c=new Float32Array(169),realA=new Float32Array(169);
+  for(let k=0;k<169;k++){
+    const i=Math.floor(k/13),j=k%13,pair=i===j,suited=i<j,gap=Math.abs(i-j);
+    let real;
+    if(allin)real=1;
+    else{
+      // strong hands realise more of their equity, weak offsuit hands less; each player still to act trims it a bit
+      real=(ip?0.92:0.78)+0.6*(eqA[k]-0.45);
+      if(pair)real+=0.04;else if(suited)real+=0.05;else if(gap>2&&Math.max(i,j)>3)real-=0.04;
+      real=Math.min(1.15,Math.max(0.5,real))*Math.pow(pair||suited?0.98:0.95,behind);
+    }
+    realA[k]=real;
+    const e=eqA[k],cont=Math.min(1,Math.max(0,(e*real-need)/0.04+0.5));
+    const rz=allin?0:Math.min(1,Math.max(0,(e-tR)/0.05+0.5));
+    r[k]=rz;c[k]=Math.max(cont,rz)-rz;
+  }
+  return{kind:'approx',sub,approx:true,ri,need,behind,ip,allin,eqA,realA,tbl:{r,c}};
 }
 function pfRaiseTo(pi,ctx){
   const p=P[pi],max=p.stack+p.bet,cb=G.currentBet;let to;
@@ -561,6 +628,7 @@ function pfRaiseTo(pi,ctx){
     case 'iso':case 'limpSB':case 'limpBB':to=30+G.limpers.length*BB+(p.pos>=7?5:0);break;
     case 'vsOpen':to=(p.pos>=7?4:3)*cb+G.callers*cb;break;
     case 'vs3o':case 'vs3c':to=cb*2.3;break;
+    case 'approx':to=G.raiseLevel===1?cb*(ctx.ip?3:4)+G.callers*cb+stillToAct(pi)*BB:G.raiseLevel===2?cb*2.3:max;break;
     default:to=max;
   }
   to=round5(to);if(to>=max*0.4)to=max;to=Math.max(to,cb+G.minRaise);return Math.min(to,max);
@@ -575,10 +643,35 @@ function sitText(ctx,p){
     case 'vs3c':return `${who(P[G.raisers[0]])} 开池，${who(P[ctx.tb])} 3bet 到 ${cb}bb。`;
     case 'vs4':return `你 3bet 之后，对手 4bet 到 ${cb}bb。`;
     case 'vs4c':return `前面已经有 4bet 到 ${cb}bb。`;
+    case 'approx':{
+      const R=P[ctx.ri],tail=`你在 ${posLabel(p.pos)}${ctx.behind?`，你后面还有 ${ctx.behind} 人没行动`:''}。`;
+      if(ctx.sub==='vsIso')return `${G.isoLimpers} 人溜入后，${who(R)} 隔离加注到 ${cb}bb${G.callers?`，${G.callers} 人跟注`:''}，${tail}`;
+      if(ctx.sub==='vsOddOpen')return `${who(R)} 开池加注到 ${cb}bb（标准开池约 ${R.pos===7?3:2.5}bb）${G.callers?`，${G.callers} 人跟注`:''}，${tail}`;
+      if(ctx.sub==='jam')return `${who(R)} ${G.raiseLevel===1?'开池':'再加注'}全下 ${cb}bb，${tail}`;
+      if(ctx.sub==='vs4Odd')return `${who(R)} 4bet 到 ${cb}bb（尺度不标准），${tail}`;
+      return `${who(R)} 3bet 到 ${cb}bb（${G.isoLimpers?'前面有人溜入':'尺度不标准'}），${tail}`;
+    }
     default:return `面对 ${cb}bb 的大额加注 / 全下。`;
   }
 }
+function approxReasons(ctx,k,fr,p){
+  const out=[],nm=clsName(k),R=P[ctx.ri],toCall=Math.min(G.currentBet-p.bet,p.stack),pot=potTotal();
+  out.push(`跟注需要胜率 ${pc(ctx.need)}：你要跟 ${fmt(toCall)}bb，跟注后底池是 ${fmt(pot+toCall)}bb。`);
+  if(ctx.sub==='vsOddOpen'||ctx.sub==='vsIso'){
+    const std=ctx.sub==='vsIso'?30+G.isoLimpers*BB:(R.pos===7?30:25);
+    const tc=Math.max(0,std-p.bet),ps=pot-G.currentBet+std;
+    out.push(`作为对比，如果加注到标准的 ${fmt(std)}bb，你只需要 ${pc(tc/(ps+tc))} 的胜率。尺度越大，需要的胜率越高，防守范围就要越紧。`);
+  }
+  const e=ctx.eqA[k],re=e*ctx.realA[k];
+  out.push(ctx.allin?`${nm} 对 ${who(R)} 估计范围的胜率约 ${pc(e)}。已经是全下，后面没有下注了，胜率可以全部实现。`
+    :`${nm} 对 ${who(R)} 估计范围的胜率约 ${pc(e)}。${ctx.ip?'你翻后有位置':'你翻后没有位置'}，按能实现的比例折算后约 ${pc(re)}。`);
+  if(ctx.behind)out.push(`你后面还有 ${ctx.behind} 人没行动，他们可能跟进来变成多人底池。非同花、不连张的牌在多人底池里很难赢，门槛更高；同花牌和口袋对受影响较小。`);
+  if(ctx.sub==='vsIso')out.push(`对手是在 ${G.isoLimpers} 个溜入者后面隔离加注，用的不是开池范围，所以不能套用"面对开池"的范围表。`);
+  out.push(fr.raise>=0.5?`${nm} 对他的范围胜率很高，适合再加注。`:fr.call+fr.raise<0.05?`折算后的胜率 ${pc(re)} 低于需要的 ${pc(ctx.need)}，弃牌。`:fr.fold<0.05?`折算后的胜率 ${pc(re)} 高于需要的 ${pc(ctx.need)}，可以继续。`:`折算后的胜率 ${pc(re)} 和需要的 ${pc(ctx.need)} 很接近，属于边缘牌。`);
+  return out;
+}
 function preReasons(ctx,k,fr,rp,cp,p){
+  if(ctx.kind==='approx')return approxReasons(ctx,k,fr,p);
   const out=[],nm=clsName(k),PN=POS_NAMES[p.pos];
   const verdict=fr.raise>=0.95?'是纯加注':fr.raise>=0.05&&fr.call>=0.05?'在加注和跟注之间混合':fr.raise>=0.05?'是混合加注（一部分频率加注，其余弃牌）':fr.call>=0.95?(G.currentBet>p.bet?'是纯跟注':'直接过牌'):fr.call>=0.05?'是混合跟注':'不在继续范围内，弃牌';
   switch(ctx.kind){
@@ -766,6 +859,7 @@ function preSizeNote(ctx,p){
     case 'iso':case 'limpSB':case 'limpBB':return '隔离加注要比正常开池大：大约 3bb，再加上每个溜入者 1bb。否则溜入的人能以很好的价格跟进来，变成多人底池，对你不利。';
     case 'vsOpen':return (p.pos>=7?'没位置 3bet 约 4 倍：翻后你要先行动，用更大的尺度让对手跟注更贵，更多时候直接弃牌。':'有位置 3bet 约 3 倍：翻后你有位置优势，不需要太大就能让对手为跟注付出代价。')+(G.callers?` 已经有 ${G.callers} 人跟注，每多一个跟注者再加约 1 倍。`:'');
     case 'vs3o':case 'vs3c':return '4bet 约是 3bet 的 2.2–2.3 倍：100bb 深度下这已经投入了约四分之一的筹码，再大就不如直接全下。';
+    case 'approx':return G.raiseLevel===1?`再加注约是对手加注的 ${ctx.ip?3:4} 倍（${ctx.ip?'有位置':'没位置要更大'}），后面每多一个可能跟进的人再加约 1bb，让他们跟进来的价格变贵。`:'这个深度下再加注基本就要投入大部分筹码。';
     default:return '这个深度下继续加注就等于全下。';
   }
 }
@@ -874,7 +968,7 @@ function act(pi,t,to){
     if(inc>=G.minRaise)G.minRaise=inc;
     put(p,to-p.bet);
     if(to>G.currentBet){G.currentBet=to;for(const q of P)if(q!==p&&!q.folded&&!q.allIn)q.acted=false;}
-    if(G.street===0){G.raiseLevel++;G.raisers.push(pi);G.callers=0;}
+    if(G.street===0){if(G.raiseLevel===0)G.isoLimpers=G.limpers.length;G.raiseLevel++;G.raisers.push(pi);G.raiseTo.push(to);G.callers=0;}
     G.aggr[G.street]=pi;G.nb++;p.lastT='raise';
     txt=p.allIn?`全下 ${fmt(to)}`:wasBet?`下注 ${fmt(to)}`:`加注到 ${fmt(to)}`;
   }
@@ -960,6 +1054,7 @@ function handDelta(net){
   d.won=G.result&&G.result.won[0]>0?1:0;d.vpip=G.hv?1:0;d.pfr=G.hp?1:0;
   const pk='p'+P[0].pos;
   for(const x of G.decisions){
+    if(x.approx)continue;
     d.dec++;d.score+=x.rating.score;const s=d.st['s'+x.street];s.d++;s.s+=x.rating.score;
     if(x.rating.lvl==='meh'||x.rating.lvl==='bad')s.b++;
     d.pos[pk].d++;d.pos[pk].s+=x.rating.score;if(x.mis)d.mis[x.mis]++;
@@ -1001,7 +1096,8 @@ function userLabel(t,to){
 }
 function userAct(t,to){
   if(G.over||G.toAct!==0)return;
-  const adv=G.cur,opt=adv.opts.find(o=>o.t===t),f=opt?opt.f:0,rating=rate(f);
+  const adv=G.cur,opt=adv.opts.find(o=>o.t===t),f=opt?opt.f:0,approx=!!(adv.ctx&&adv.ctx.approx);
+  const rating=approx?{lvl:'na',txt:'近似局面，不计分',score:0}:rate(f);
   let note='';
   if((t==='bet'||t==='raise')&&opt&&opt.to&&f>0){const ratio=to/opt.to;if(ratio>1.8||ratio<0.55)note=`尺度偏离：建议约 ${fmt(opt.to)}bb。`;}
   const best=adv.opts.reduce((a,b)=>b.f>a.f?b:a);
@@ -1009,7 +1105,7 @@ function userAct(t,to){
   const RK={fold:0,check:1,call:1,bet:2,raise:2};let mis=null;
   if(rating.lvl==='meh'||rating.lvl==='bad'){const c=RK[t],b=RK[best.t];if(c<b)mis=c===0?'tight':'passive';else if(c>b)mis=(b===0&&c===1)?'loose':'aggr';}
   if(G.street===0&&t!=='fold'&&t!=='check')G.hv=true;if(G.street===0&&(t==='raise'||t==='bet'))G.hp=true;
-  const d={street:G.street,sit:adv.sit,chose,best:best.label,f,rating,note,mis,board:G.board.slice()};
+  const d={street:G.street,sit:adv.sit,chose,best:best.label,f,rating,note,mis,approx,board:G.board.slice()};
   G.decisions.push(d);G.feedback=d;G.lastAdvice=adv;G.showAdvice=true;
   commit(0,adv,t,to);
 }
@@ -1070,7 +1166,7 @@ function renderAction(){
   const el=$('#actionbar'),p=P[0];
   if(G.over){
     const net=P[0].stack-START;
-    const hs=G.decisions.length?Math.round(G.decisions.reduce((a,d)=>a+d.rating.score,0)/G.decisions.length*100):null;
+    const sd=G.decisions.filter(d=>!d.approx),hs=sd.length?Math.round(sd.reduce((a,d)=>a+d.rating.score,0)/sd.length*100):null;
     el.innerHTML=`<div class="res">本手你${net>0?'<span class="pos">赢了</span>':net<0?'<span class="neg">输了</span>':'持平'} <b>${fmt(Math.abs(net))}</b> bb${hs!=null?` <span class="hs">· 决策得分 ${hs}%</span>`:''}</div>${verdictHTML()}<div class="acts"><button class="btn primary" id="nextBtn">下一手</button></div>`;
     $('#nextBtn').onclick=newHand;return;
   }
@@ -1108,6 +1204,7 @@ function renderAction(){
 }
 function verdictHTML(){
   const d=G.feedback;if(!d||!G.decisions.length)return'';
+  if(d.approx)return `<div class="verdict lv-na"><span class="vi">·</span><span>上一步 <b>${d.chose}</b>：近似局面，不计分（近似建议里这个动作占 ${pc(d.f)}，主选 <b>${d.best}</b>）</span></div>`;
   const icon={best:'✓',ok:'✓',meh:'!',bad:'✗'}[d.rating.lvl];
   const tail=d.rating.lvl==='best'?'':` · GTO 主选 <b>${d.best}</b>`;
   return `<div class="verdict lv-${d.rating.lvl}"><span class="vi">${icon}</span><span>上一步 <b>${d.chose}</b>：${d.rating.txt}（GTO ${pc(d.f)}）${tail}${d.note?' · '+d.note:''}</span></div>`;
@@ -1115,10 +1212,11 @@ function verdictHTML(){
 function miniHTML(){
   if(!G.cur||!G.showAdvice)return'';
   const o=G.cur.opts;
-  return `<div class="mini"><div class="fbar">${o.filter(x=>x.f>0.001).map(x=>`<span class="f-${x.t}" style="width:${x.f*100}%"></span>`).join('')}</div><span>GTO：${o.map(x=>`${x.label.replace(/（.*）/,'')} ${pc(x.f)}`).join(' · ')}</span></div>`;
+  return `<div class="mini"><div class="fbar">${o.filter(x=>x.f>0.001).map(x=>`<span class="f-${x.t}" style="width:${x.f*100}%"></span>`).join('')}</div><span>${G.cur.ctx&&G.cur.ctx.approx?'近似建议（不计分）':'GTO'}：${o.map(x=>`${x.label.replace(/（.*）/,'')} ${pc(x.f)}`).join(' · ')}</span></div>`;
 }
 function fbHTML(d){
   if(!d)return'';
+  if(d.approx)return `<div class="fb lv-na"><span class="badge">不计分</span>你选择了 <b>${d.chose}</b>。这个局面没有标准范围表，近似建议里这个动作占 ${pc(d.f)}，主选是${d.best}。</div>`;
   return `<div class="fb lv-${d.rating.lvl}"><span class="badge">${d.rating.txt}</span>你选择了 <b>${d.chose}</b>，GTO 在这里选它的频率是 ${pc(d.f)}。${d.rating.lvl==='best'?'':`最高频的动作：${d.best}。`}${d.note?' '+d.note:''}</div>`;
 }
 function freqHTML(opts){
@@ -1136,8 +1234,11 @@ function matrixHTML(a){
   h+='</div></div><div class="legend"><span><i class="f-raise"></i>加注</span><span><i class="f-call"></i>'+(a.pre.m.check?'过牌':'跟注')+'</span><span><i style="background:#2b3640"></i>弃牌</span><span>右上同花 · 左下不同花 · 白框是你的手牌</span></div>';
   return h;
 }
+function kindLabel(a){return a.street>0?'翻后 · 启发式近似':a.ctx&&a.ctx.approx?'翻前 · 近似建议（不计分）':'翻前 · 求解器范围近似';}
 function adviceBody(a){
-  let h=`<p class="sit">${a.sit}</p>`+freqHTML(a.opts);
+  let h=`<p class="sit">${a.sit}</p>`;
+  if(a.ctx&&a.ctx.approx)h+=`<div class="warnbox">此局面没有标准范围表，以下为近似建议，不计入 GTO 评分。${a.ctx.kind==='approx'?'近似方法：用每手牌对加注者估计范围的胜率，按位置和后面还没行动的人数折算，再和跟注需要的胜率比较。':'溜入底池里的加注/过牌范围是按开池范围调整出来的，没有求解器数据。'}</div>`;
+  h+=freqHTML(a.opts);
   if(a.street===0){
     h+=`<div class="line"><span class="lbl">你的手牌</span> <b>${clsName(a.k)}</b> · <span class="lbl">加注范围</span> ${a.rp}%${a.cp>0?` · <span class="lbl">跟注范围</span> ${a.cp}%`:''}</div>`;
     h+=`<ul class="why">${a.reasons.map(r=>`<li>${r}</li>`).join('')}</ul>`;
@@ -1182,24 +1283,24 @@ function reviewHTML(){
     h+='<div class="sd">'+P.filter(q=>!q.folded).sort((a,b)=>r.vals[b.i]-r.vals[a.i]).map(q=>`<div>${q.hole.map(c=>cardHTML(c,'xs')).join('')}<span class="${r.won[q.i]?'w':''}">${who(q)} · ${handName(r.vals[q.i])}${r.won[q.i]?` · 赢 ${fmt(r.won[q.i])}bb`:''}</span></div>`).join('')+'</div>';
   }else if(r){const w=P.find(q=>r.won[q.i]>0);h+=`<p class="empty">${who(w)} 下注后无人跟注，直接赢下底池。</p>`;}
   if(G.decisions.length){
-    const sc=Math.round(G.decisions.reduce((a,d)=>a+d.rating.score,0)/G.decisions.length*100);
-    h+=`<div class="line"><span class="lbl">本手决策得分</span> <b>${sc}%</b>（${G.decisions.length} 个决策）</div>`;
+    const sd=G.decisions.filter(d=>!d.approx),na=G.decisions.length-sd.length;
+    h+=sd.length?`<div class="line"><span class="lbl">本手决策得分</span> <b>${Math.round(sd.reduce((a,d)=>a+d.rating.score,0)/sd.length*100)}%</b>（${sd.length} 个计分决策${na?`，${na} 个近似局面不计分`:''}）</div>`:`<div class="line"><span class="lbl">本手决策得分</span> 无（${na} 个决策都是近似局面，不计分）</div>`;
     h+='<div class="revwrap"><table class="rev"><thead><tr><th>街</th><th>你的选择</th><th>GTO 最高频</th><th>评价</th></tr></thead><tbody>'+
-      G.decisions.map(d=>`<tr><td>${STREET_CN[d.street]}</td><td>${d.chose}</td><td>${d.best}</td><td><span class="rv lv-${d.rating.lvl}">${d.rating.txt}</span> ${pc(d.f)}${d.note?`<br><span class="lbl">${d.note}</span>`:''}</td></tr>`).join('')+'</tbody></table></div>';
+      G.decisions.map(d=>`<tr><td>${STREET_CN[d.street]}</td><td>${d.chose}</td><td>${d.best}</td><td><span class="rv lv-${d.rating.lvl}">${d.rating.txt}</span>${d.approx?'':' '+pc(d.f)}${d.note?`<br><span class="lbl">${d.note}</span>`:''}</td></tr>`).join('')+'</tbody></table></div>';
   }else h+='<p class="empty">这手你没有需要做的决定（比如前面全弃牌到你的大盲）。</p>';
   return h;
 }
 function renderAdvice(){
   const el=$('#advice');
-  if(G.over){el.innerHTML=reviewHTML()+(G.lastAdvice?`<div class="sep"></div><h2>你最后一步的分析 <span class="kind">${G.lastAdvice.street===0?'翻前 · 求解器范围近似':'翻后 · 启发式近似'}</span></h2>${fbHTML(G.feedback)}${adviceBody(G.lastAdvice)}`:'');return;}
+  if(G.over){el.innerHTML=reviewHTML()+(G.lastAdvice?`<div class="sep"></div><h2>你最后一步的分析 <span class="kind">${kindLabel(G.lastAdvice)}</span></h2>${fbHTML(G.feedback)}${adviceBody(G.lastAdvice)}`:'');return;}
   if(G.toAct===0&&G.cur){
-    const kind=G.street===0?'翻前 · 求解器范围近似':'翻后 · 启发式近似';
+    const kind=kindLabel(G.cur);
     let h=`<h2>GTO 建议 <span class="kind">${kind}</span></h2>`;
     if(G.feedback&&G.feedback.street===G.street&&G.decisions.length)h+=`<div class="line"><span class="lbl">上一步</span></div>`+fbHTML(G.feedback);
     if(!G.showAdvice){h+=`<div class="quiz"><p class="sit">${G.cur.sit}</p><span>测验模式：先在下方做出你的决定，再看 GTO 怎么打。</span><button class="btn ghost" id="peek">现在就看建议</button></div>`;el.innerHTML=h;$('#peek').onclick=()=>{G.showAdvice=true;render();};return;}
     el.innerHTML=h+adviceBody(G.cur);return;
   }
-  if(G.lastAdvice){el.innerHTML=`<h2>上一步分析 <span class="kind">${G.lastAdvice.street===0?'翻前 · 求解器范围近似':'翻后 · 启发式近似'}</span></h2>${fbHTML(G.feedback)}${adviceBody(G.lastAdvice)}`;return;}
+  if(G.lastAdvice){el.innerHTML=`<h2>上一步分析 <span class="kind">${kindLabel(G.lastAdvice)}</span></h2>${fbHTML(G.feedback)}${adviceBody(G.lastAdvice)}`;return;}
   el.innerHTML=`<h2>GTO 建议</h2><p class="empty">轮到你行动时，这里会显示 GTO 建议的动作和频率、范围矩阵、胜率和理由。</p>`;
 }
 function renderLog(){
