@@ -138,6 +138,14 @@ button,select,input{font:inherit;color:inherit}
 .mini{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
 .mini .fbar{height:8px}
 .hs{font-size:13px;color:var(--muted)}
+.ver{font-family:var(--ff-num);font-size:12px;font-weight:600;color:var(--brass);background:var(--brass-soft);border:0;border-radius:999px;padding:1px 9px;vertical-align:5px;cursor:pointer;letter-spacing:0}
+.ver:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.cls{display:flex;flex-direction:column;gap:14px;max-height:min(60vh,520px);overflow-y:auto}
+.cl h3{margin:0 0 6px;font-size:15px;font-family:var(--ff-num)}.cl h3 small{font-family:var(--ff-body);font-weight:400;color:var(--muted);font-size:12px;margin-left:6px}
+.cl ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.cl li{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:baseline;font-size:13.5px}
+.clt{font-size:11px;font-weight:700;border-radius:4px;padding:0 6px;white-space:nowrap}
+.clt-fix{background:rgba(222,88,71,.2);color:#f5a196}.clt-new{background:rgba(53,167,118,.2);color:#8fdcb6}.clt-imp{background:rgba(77,132,214,.22);color:#9dbbe8}
 .warnbox{background:rgba(224,138,58,.12);border:1px solid rgba(224,138,58,.45);color:#f0c49a;border-radius:9px;padding:8px 10px;font-size:13px}
 .verdict.lv-na{border-left-color:var(--dim)}.verdict.lv-na .vi{color:var(--muted)}
 .fb.lv-na{border-left-color:var(--dim)}.fb.lv-na .badge{color:var(--muted)}
@@ -264,7 +272,7 @@ table.rev td{padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:
 <div class="wrap">
   <header class="top">
     <div class="brand">
-      <h1>德扑 <em>GTO</em> 训练台</h1>
+      <h1>德扑 <em>GTO</em> 训练台 <button type="button" class="ver" id="verBtn" title="查看更新记录"></button></h1>
       <p>九人桌 · 每手 100bb · 你对 8 个 AI，每一步给出 GTO 建议</p>
     </div>
     <div class="stats" id="stats"></div>
@@ -296,6 +304,7 @@ table.rev td{padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:
     <section class="panel" id="advice"></section>
     <section class="panel logp"><h2>牌局记录</h2><ol id="log"></ol></section>
   </main>
+  <div class="modal" id="verModal" hidden><div class="sheet wide" id="verSheet" role="dialog" aria-modal="true" aria-labelledby="verTitle"></div></div>
   <div class="modal" id="oppModal" hidden><div class="sheet wide" id="oppSheet" role="dialog" aria-modal="true" aria-labelledby="oppTitle"></div></div>
   <div class="modal" id="acctModal" hidden><div class="sheet" id="acctSheet" role="dialog" aria-modal="true" aria-labelledby="acctTitle"></div></div>
   <p class="note">翻前建议基于九人桌 100bb 求解器范围的近似（小盲简化为加注或弃牌）。翻后建议用你对“对手估计范围”的胜率、底池赔率、MDF 和牌面结构推算，属于求解器思路的近似，不是逐点求解的结果。AI 对手按同一套策略带随机混合行动。</p>
@@ -876,10 +885,12 @@ const STYLE_DEF={
     hint:'他诈唬偏多。抓诈可以比 GTO 宽一点；拿强牌时多过牌、跟注，让他自己把钱打进来，少去诈唬他。'},
   nit:{n:'超紧',full:'超紧玩家',d:'只玩大牌，下注加注基本就是强牌。',w:0.45,a:0.8,open:1,stick:-0.45,agg:-0.15,bluff:-0.8,size:0.9,rand:0,cap:1,
     hint:'他只用强牌进攻。面对他的下注和加注要多弃牌（尤其是中等牌）；他过牌或只跟注时，多下注偷底池。'},
-  lp:{n:'松弱',full:'松弱玩家',d:'什么牌都想看翻牌，很少加注，喜欢一路跟注。',w:2.3,a:0.25,open:0.3,stick:0.65,agg:-0.65,bluff:-0.6,size:0.6,rand:0,cap:0.85,
+  lp:{n:'松弱',full:'松弱玩家',d:'什么牌都想看翻牌，很少加注，有一点牌就一路跟注。',w:2.3,a:0.25,open:0.3,stick:0.65,
+    stickB:{good:0.6,medium:0.9,weak:0.85,draw:0.9,strongdraw:0.9,weakdraw:0.6,air:[0.45,0.2,0.08],airA:[0.55,0.35,0.25]},agg:-0.65,bluff:-0.6,size:0.6,rand:0,cap:0.85,
     hint:'他跟注很宽、几乎不诈唬。价值下注可以更薄、更大，基本不要诈唬他；他突然加注时，通常是很强的牌。'},
-  fish:{n:'新手',full:'新手玩家',d:'打法不稳定，跟注偏多，偶尔做出奇怪的动作。',w:2.6,a:0.5,open:0.45,stick:0.45,agg:-0.15,bluff:0.05,size:'rand',rand:0.1,cap:0.9,
-    hint:'他跟注偏多、动作不稳定。少诈唬，多价值下注；大注也很容易被跟。他的下注尺度不太代表牌力。'}
+  fish:{n:'新手',full:'新手玩家',d:'玩的牌多，大多溜入和跟注；翻后有牌就跟，很少加注，没中就放弃。',w:2.6,a:0.3,open:0.25,stick:0.45,agg:-0.5,bluff:0.05,size:'rand',rand:0.08,cap:0.9,
+    stickB:{good:0.5,medium:0.8,weak:0.75,draw:0.8,strongdraw:0.8,weakdraw:0.5,air:[0.3,0.12,0.03],airA:[0.4,0.2,0.12]},
+    hint:'他有一点牌就会一路跟，但完全没中时会放弃。少诈唬（尤其在他可能中了对子的牌面），多价值下注，中等牌也可以下注拿价值；他很少加注，加注时通常是强牌。'}
 };
 const STYLE_KEYS=['gto','tag','lag','nit','lp','fish'];
 const STYLE_PRESETS=[
@@ -919,12 +930,23 @@ function stylePre(p,st,adv){
     if(o.t==='raise'&&st.size==='rand'){const max=p.stack+p.bet;y.to=Math.min(max,Math.max(G.currentBet+G.minRaise,round5(o.to*(0.8+Math.random()*1.2))));}
     return y;});
 }
+
+// How readily a style calls instead of folding, by what it holds. Calling stations call with any pair or draw
+// but give up with nothing as the streets go on, more so against big bets.
+function stickFor(st,b,street,aceHigh,betFrac){
+  if(!st.stickB)return st.stick;
+  let v=b==='air'?(aceHigh?st.stickB.airA:st.stickB.air)[Math.min(3,Math.max(1,street))-1]:(st.stickB[b]!=null?st.stickB[b]:st.stick);
+  if((b==='air'||b==='weakdraw')&&betFrac>=0.75)v*=0.6;
+  return v;
+}
 function stylePost(p,st,adv){
   const o=adv.opts.map(x=>Object.assign({},x)),get=t=>o.find(x=>x.t===t);
   const mv=(a,b,amt)=>{if(!a||!b)return;amt=Math.max(0,Math.min(amt,a.f));a.f-=amt;b.f+=amt;};
   if(get('fold')){
     const F=get('fold'),Cc=get('call'),Rr=get('raise');
-    if(st.stick>0)mv(F,Cc,st.stick*F.f);else if(adv.eq<0.6)mv(Cc,F,-st.stick*Cc.f);
+    const pot=potTotal(),bf=Cc.amt?Cc.amt/Math.max(1,pot-Cc.amt):0;
+    const sk=stickFor(st,adv.cl.b,G.street,/A 高/.test(adv.cl.d),bf);
+    if(sk>0)mv(F,Cc,sk*F.f);else if(adv.eq<0.6)mv(Cc,F,-sk*Cc.f);
     if(Rr){if(st.agg>0)mv(Cc,Rr,st.agg*Cc.f*(adv.eq>0.35?1:0.5));else mv(Rr,Cc,-st.agg*Rr.f);}
   }else{
     const K=get('check'),Bt=get('bet');
@@ -940,14 +962,20 @@ function stylePost(p,st,adv){
   }
   return o;
 }
-function styleMult(m,t,b,st){
+function styleMult(m,t,b,st,aceHigh){
   const weak=b==='air'||b==='weak'||b==='weakdraw';
   if(t==='bet'||t==='raise'){
     if(weak)return st.bluff>0?m+st.bluff*(1-m)*0.5:m*(1+st.bluff);
     if(b==='medium'&&st.agg<0)return m*(1+st.agg);
     return m;
   }
-  if(t==='call'){if(b!=='strong'&&b!=='good')return st.stick>0?m+st.stick*(1-m):m*(1+st.stick);return m;}
+  if(t==='call'){
+    if(b==='strong')return m;
+    if(b==='good'&&!st.stickB)return m;
+    const pot=potTotal(),bf=G.currentBet>0?G.currentBet/Math.max(1,pot-G.currentBet):0;
+    const sk=stickFor(st,b,G.street,aceHigh,bf);
+    return sk>0?m+sk*(1-m):m*(1+sk);
+  }
   if((b==='strong'||b==='good')&&st.agg<0)return m+(-st.agg)*(1-m);
   if(weak&&st.bluff>0)return m*(1-st.bluff*0.5);
   return m;
@@ -983,7 +1011,7 @@ function pfUpdate(p,adv,t){
 }
 function narrow(p,t){
   const tb=(t==='bet'||t==='raise')?AGG:t==='call'?CALLM:CHECKM;const B=G.board,st=styleOf(p),plain=st===STYLE_DEF.gto;
-  for(const c of p.combos){if(c[2]<=0)continue;if(B.includes(c[0])||B.includes(c[1])){c[2]=0;continue;}const b=classify(c[0],c[1],B).b;c[2]*=plain?tb[b]:styleMult(tb[b],t,b,st);}
+  for(const c of p.combos){if(c[2]<=0)continue;if(B.includes(c[0])||B.includes(c[1])){c[2]=0;continue;}const b=classify(c[0],c[1],B).b;c[2]*=plain?tb[b]:styleMult(tb[b],t,b,st,Math.max(c[0],c[1])>>2===12);}
 }
 function commit(pi,adv,t,to){
   const p=P[pi];
@@ -1001,7 +1029,8 @@ function botMove(pi){
   if(st!==STYLE_DEF.gto)opts=adv.street===0?stylePre(p,st,adv):stylePost(p,st,adv);
   const s=opts.reduce((a,x)=>a+x.f,0);if(s>0)opts.forEach(x=>x.f/=s);
   let o=sample(opts);
-  if(st.rand&&Math.random()<st.rand){const legal=opts.filter(x=>x.t!=='fold');o=legal[(Math.random()*legal.length)|0]||o;}
+  // occasional loose preflop call/limp with a hand outside the range; never random after the flop
+  if(st.rand&&adv.street===0&&Math.random()<st.rand){const c=opts.find(x=>x.t==='call'||x.t==='check');if(c)o=c;}
   commit(pi,adv,o.t,o.to);
 }
 function afterAction(pi){
@@ -1442,6 +1471,73 @@ function renderOpp(){
   el.querySelectorAll('select[data-i]').forEach(sel=>sel.onchange=()=>{SETTINGS.styles[+sel.dataset.i]=sel.value;save('gto9-settings',SETTINGS);renderOpp();renderOppBtn();});
 }
 
+
+/* ================= version & changelog ================= */
+// Newest first. Each update: bump APP_VERSION and add an entry at the top.
+const APP_VERSION='1.4.1';
+const CHANGELOG=[
+  {v:'1.4.1',date:'2026-10-25',items:[
+    ['修复','新手 AI 翻后太离谱：完全没中牌也会一路跟到河牌，面对满池下注也跟；翻后还会随机做动作。'],
+    ['改进','新手和松弱玩家改为"有牌就跟"：有对子、听牌跟得很宽；完全没中的牌到转牌、河牌大多会放弃，下注越大放弃得越多。'],
+    ['改进','新手 AI 很少加注了：入池多，但大多是溜入和跟注。']
+  ]},
+  {v:'1.4.0',date:'2026-10-25',items:[
+    ['修复','翻前把"跛入后的隔离加注"当成普通开池，套错了范围表（比如 3 人跛入后 BTN 加注到 8bb，J8o 被建议跟注）。'],
+    ['修复','家庭局里 AI 常见的大尺度开池（6–10bb）和不标准的 3bet、4bet 都被当成标准尺度处理。'],
+    ['新增','翻前先识别局面类型：无人入池、跛入底池、面对开池、面对隔离加注、面对 3bet、面对 4bet。'],
+    ['新增','没有标准范围表的局面改用近似模型：按底池赔率、位置和后面还没行动的人数给建议，并明确标注。'],
+    ['改进','近似局面不计入 GTO 评分，复盘里标为"不计分"，不会再把正确的弃牌判成偏离。']
+  ]},
+  {v:'1.3.0',date:'2026-10-24',items:[
+    ['新增','对手类型：每个座位可选 GTO、紧凶、松凶、超紧、松弱、新手，还有家庭局等预设。'],
+    ['新增','剥削提示：告诉你面对这类对手可以怎么偏离 GTO（不影响评分）。'],
+    ['新增','下注尺度解释：说明为什么用这个尺度，并对比 33% / 50% / 75% / 满池 / 超池。'],
+    ['修复','电脑离线版里，隐藏的登录窗口会盖住整个页面。']
+  ]},
+  {v:'1.2.0',date:'2026-10-24',items:[
+    ['新增','账号登录：多台设备同步记录，离线时照常打牌，联网后自动上传。'],
+    ['新增','统计 bb/100、VPIP、PFR、各条街和各位置得分、失误类型。'],
+    ['新增','管理后台：查看所有玩家的统计和错误分析。']
+  ]},
+  {v:'1.1.0',date:'2026-10-22',items:[
+    ['改进','操作栏直接显示上一步的对错，手机上不用往下滑也能看到。'],
+    ['新增','实时显示模式下，操作栏多一条 GTO 频率条。']
+  ]},
+  {v:'1.0.0',date:'2026-10-22',items:[
+    ['新增','九人桌人机对局，每手 100bb，完整打到河牌。'],
+    ['新增','每一步的 GTO 建议、翻前范围矩阵、翻后胜率分析和本手复盘。']
+  ]}
+];
+function verCmp(a,b){const x=String(a).split('.').map(Number),y=String(b).split('.').map(Number);for(let i=0;i<3;i++){if((x[i]||0)!==(y[i]||0))return(x[i]||0)-(y[i]||0);}return 0;}
+function changelogHTML(list){
+  return list.map(e=>`<section class="cl"><h3>v${e.v} <small>${e.date}</small></h3><ul>${e.items.map(([t,x])=>`<li><span class="clt clt-${t==='修复'?'fix':t==='新增'?'new':'imp'}">${t}</span><span>${x}</span></li>`).join('')}</ul></section>`).join('');
+}
+function showChangelog(sinceVersion){
+  const fresh=sinceVersion?CHANGELOG.filter(e=>verCmp(e.v,sinceVersion)>0):CHANGELOG;
+  const isUpdate=!!sinceVersion;
+  $('#verSheet').innerHTML=`<button class="x" id="verClose" aria-label="关闭">×</button>
+    <h2 id="verTitle">${isUpdate?`已更新到 v${APP_VERSION}`:'更新记录'}</h2>
+    ${isUpdate?`<p class="fine">上次在这台设备上打开的是 v${esc(sinceVersion)}，这之后的改动：</p>`:`<p class="fine">当前版本 v${APP_VERSION}</p>`}
+    <div class="cls">${changelogHTML(fresh)}</div>
+    <div class="row">${isUpdate&&fresh.length<CHANGELOG.length?'<button class="btn ghost sm" id="verAll">查看全部更新记录</button>':''}<button class="btn primary sm" id="verOk">知道了</button></div>`;
+  $('#verModal').hidden=false;
+  const close=()=>{$('#verModal').hidden=true;};
+  $('#verClose').onclick=close;$('#verOk').onclick=close;
+  const all=$('#verAll');if(all)all.onclick=()=>showChangelog(null);
+}
+function initVersion(){
+  $('#verBtn').textContent='v'+APP_VERSION;
+  $('#verBtn').onclick=()=>showChangelog(null);
+  $('#verModal').addEventListener('click',e=>{if(e.target.id==='verModal')$('#verModal').hidden=true;});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')$('#verModal').hidden=true;});
+  let seen=null,used=false;
+  try{seen=localStorage.getItem('gto9-seen-version');used=!!(localStorage.getItem('gto9-stats')||localStorage.getItem('gto9-settings'));}catch(e){}
+  // Anyone who used the app before version tracking existed last saw 1.3.0.
+  if(!seen&&used)seen='1.3.0';
+  if(seen&&verCmp(APP_VERSION,seen)>0)showChangelog(seen);
+  try{localStorage.setItem('gto9-seen-version',APP_VERSION);}catch(e){}
+}
+
 /* ================= boot ================= */
 function initSettings(){
   const sp=$('#setPos'),sm=$('#setMode'),ss=$('#setSpeed');
@@ -1458,6 +1554,7 @@ function initSettings(){
 initSettings();
 initAccount();
 newHand();
+initVersion();
 </script>
 
 <script>
