@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0e1318">
+<title>德扑 GTO 管理后台</title>
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+/* Layout: header; summary tiles; sortable player table; selected player's analysis below. Same palette as the game. */
+:root{
+  color-scheme:dark;
+  --bg:#0e1318;--panel:#151c22;--panel2:#1c252d;--line:#2a353e;--fg:#e8ecea;--muted:#93a0a8;--dim:#62707a;
+  --brass:#d6ab52;--fold:#4d84d6;--call:#35a776;--raise:#de5847;--warn:#e08a3a;
+  --ff-body:"Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",system-ui,sans-serif;
+  --ff-disp:"Noto Serif SC","Songti SC","STSong","SimSun",serif;
+  --ff-num:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box}
+html,body{background:var(--bg);color:var(--fg);margin:0}
+body{font-family:var(--ff-body);font-size:14px;line-height:1.55}
+button,input{font:inherit;color:inherit}
+[hidden]{display:none!important}
+.wrap{max-width:1240px;margin:0 auto;padding-block:16px 32px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:16px}
+header{display:flex;flex-wrap:wrap;gap:10px 20px;align-items:flex-end;justify-content:space-between}
+h1{font-family:var(--ff-disp);font-weight:900;font-size:24px;margin:0;letter-spacing:.04em}
+h1 em{font-style:normal;color:var(--brass)}
+header p{margin:2px 0 0;color:var(--muted);font-size:13px}
+.hright{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{border:0;border-radius:9px;padding:8px 14px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block;font-size:14px}
+.btn.primary{background:var(--brass);color:#1a1408}.btn.ghost{background:var(--panel2);border:1px solid var(--line);color:var(--fg);font-weight:500}
+.btn:focus-visible,input:focus-visible,th button:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.btn[disabled]{opacity:.6}
+.me{color:var(--muted);font-size:13px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel h2{margin:0;font-family:var(--ff-disp);font-size:17px;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:baseline}
+.panel h2 small{font-family:var(--ff-body);font-size:12px;color:var(--muted);font-weight:400}
+.login{max-width:380px;margin:40px auto 0;width:100%}
+.login form{display:flex;flex-direction:column;gap:10px}
+.login label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.login input{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:16px}
+.err{color:#f5a196;margin:0;font-size:13px}.muted{color:var(--muted);margin:0}
+.tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:700px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+.tile span{display:block;font-size:12px;color:var(--muted)}
+.tile b{font-family:var(--ff-num);font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
+.tablewrap{overflow-x:auto;margin:0 -4px}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:860px}
+th{text-align:right;font-weight:500;color:var(--muted);border-bottom:1px solid var(--line);padding:0;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th button{background:none;border:0;color:inherit;cursor:pointer;padding:6px 8px;width:100%;text-align:inherit;font-size:12px}
+th button.on{color:var(--fg);font-weight:700}
+td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;font-family:var(--ff-num);font-variant-numeric:tabular-nums;white-space:nowrap}
+td:first-child{font-family:var(--ff-body)}
+td .nm{font-weight:700}td .em{display:block;color:var(--dim);font-size:11px}
+tbody tr[data-id]{cursor:pointer}
+tbody tr[data-id]:hover{background:var(--panel2)}
+tbody tr.sel{background:#22303a}
+tbody tr:focus-visible{outline:2px solid var(--brass);outline-offset:-2px}
+.pos{color:var(--call)}.neg{color:var(--raise)}
+.sc{display:inline-block;min-width:3.2em;padding:0 6px;border-radius:5px}
+.sc.g{background:rgba(53,167,118,.18);color:#8fdcb6}.sc.m{background:rgba(214,171,82,.16);color:#e6c47c}.sc.b{background:rgba(222,88,71,.18);color:#f5a196}.sc.n{color:var(--dim)}
+.detail{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+@media (max-width:900px){.detail{grid-template-columns:minmax(0,1fr)}}
+.box{background:var(--panel2);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.box h3{margin:0;font-size:14px}
+.bars{display:flex;flex-direction:column;gap:6px}
+.bar{display:grid;grid-template-columns:4.6em 1fr 4.4em;gap:8px;align-items:center;font-size:12px}
+.bar .t{height:10px;background:var(--bg);border-radius:3px;overflow:hidden}
+.bar .t i{display:block;height:100%;border-radius:3px}
+.bar b{font-family:var(--ff-num);font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
+.bar.low{opacity:.5}
+.key{background:var(--panel);border-left:3px solid var(--warn);border-radius:8px;padding:10px 12px}
+.key b{color:#e8b07a}
+.mini{width:100%;border-collapse:collapse;font-size:12.5px;min-width:0}
+.mini th,.mini td{padding:5px 6px;font-size:12.5px}
+.mini th{padding:5px 6px}
+.note{color:var(--dim);font-size:12px;margin:0}
+.empty{color:var(--muted);text-align:center;padding:24px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><h1>德扑 <em>GTO</em> 管理后台</h1><p>所有账号的牌局统计和错误分析</p></div>
+    <div class="hright"><span class="me" id="me"></span><a class="btn ghost" href="./">返回牌桌</a><button class="btn ghost" id="outBtn" hidden>退出登录</button></div>
+  </header>
+  <main id="app"><p class="muted">加载中…</p></main>
+</div>
+
+<script src="firebase-app-compat.js"></script>
+<script src="firebase-auth-compat.js"></script>
+<script src="firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+'use strict';
+const BB=10, POS=['UTG','UTG+1','UTG+2','LJ','HJ','CO','BTN','SB','BB'], STREETS=['翻前','翻牌','转牌','河牌'];
+const MIS={loose:['跟注过多','该弃牌的时候跟注了'],tight:['弃牌过多','该继续的时候弃牌了'],passive:['过于被动','该下注或加注时只过牌/跟注'],aggr:['过于激进','该过牌、跟注或弃牌时下注/加注']};
+const $=s=>document.querySelector(s), app=$('#app');
+function blankStats(){const st={},pos={};['s0','s1','s2','s3'].forEach(k=>st[k]={d:0,s:0,b:0});for(let i=0;i<9;i++)pos['p'+i]={d:0,s:0};return{hands:0,net:0,dec:0,score:0,th:0,won:0,vpip:0,pfr:0,st,pos,mis:{loose:0,tight:0,passive:0,aggr:0}};}
+function addInto(a,b){for(const k in b){const v=b[k];if(v&&typeof v==='object'){if(!a[k]||typeof a[k]!=='object')a[k]={};addInto(a[k],v);}else if(typeof v==='number')a[k]=(+a[k]||0)+v;}return a;}
+function esc(t){return String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+const pct=(a,b)=>b?a/b:null;
+const fmtPct=v=>v==null?'—':Math.round(v*100)+'%';
+function scoreCell(v,n){if(v==null)return'<span class="sc n">—</span>';const c=v>=0.8?'g':v>=0.6?'m':'b';return `<span class="sc ${c}" title="${n} 个决策">${Math.round(v*100)}%</span>`;}
+function ago(ts){
+  if(!ts||!ts.toDate)return'—';const d=ts.toDate(),m=(Date.now()-d)/60000;
+  if(m<2)return'刚刚';if(m<60)return Math.round(m)+' 分钟前';if(m<1440)return Math.round(m/60)+' 小时前';if(m<1440*7)return Math.round(m/1440)+' 天前';
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function metrics(u){
+  const S=u.stats;
+  return{name:u.name||'(未命名)',email:u.email||'',hands:S.hands,net:S.net/BB,bb100:S.hands?S.net/BB/S.hands*100:null,
+    won:pct(S.won,S.th),vpip:pct(S.vpip,S.th),pfr:pct(S.pfr,S.th),score:pct(S.score,S.dec),dec:S.dec,
+    st:[0,1,2,3].map(i=>({v:pct(S.st['s'+i].s,S.st['s'+i].d),d:S.st['s'+i].d,b:S.st['s'+i].b})),
+    last:u.lastActive?u.lastActive.toMillis?u.lastActive.toMillis():0:0,lastTs:u.lastActive,created:u.createdAt};
+}
+const COLS=[['name','玩家'],['hands','手数'],['net','盈亏 bb'],['bb100','bb/100'],['won','赢下底池'],['vpip','VPIP'],['pfr','PFR'],['score','决策得分'],['s0','翻前'],['s1','翻牌'],['s2','转牌'],['s3','河牌'],['last','最近活跃']];
+let USERS=[],SORT={k:'hands',dir:-1},SEL=null,unsub=null;
+
+function sortVal(m,k){if(/^s\d$/.test(k))return m.st[+k[1]].v;return m[k];}
+function render(){
+  if(!USERS.length){app.innerHTML='<div class="panel"><p class="empty">还没有玩家注册。把牌桌链接发给朋友，让他们注册后这里就会出现。</p></div>';return;}
+  const ms=USERS.map(u=>({u,m:metrics(u)}));
+  ms.sort((a,b)=>{const x=sortVal(a.m,SORT.k),y=sortVal(b.m,SORT.k);if(SORT.k==='name')return SORT.dir*String(x).localeCompare(String(y),'zh');if(x==null&&y==null)return 0;if(x==null)return 1;if(y==null)return -1;return SORT.dir*(x-y);});
+  const totH=ms.reduce((a,x)=>a+x.m.hands,0),totD=USERS.reduce((a,u)=>a+u.stats.dec,0),totS=USERS.reduce((a,u)=>a+u.stats.score,0);
+  const active=ms.filter(x=>x.m.last&&Date.now()-x.m.last<7*864e5).length;
+  let h=`<div class="tiles"><div class="tile"><span>玩家</span><b>${USERS.length}</b></div><div class="tile"><span>7 天内活跃</span><b>${active}</b></div><div class="tile"><span>总手数</span><b>${totH}</b></div><div class="tile"><span>整体决策得分</span><b>${fmtPct(pct(totS,totD))}</b></div></div>`;
+  h+=`<section class="panel"><h2>玩家列表 <small>点表头排序，点一行看详细分析</small></h2><div class="tablewrap"><table><thead><tr>${COLS.map(([k,l])=>`<th><button class="${SORT.k===k?'on':''}" data-k="${k}">${l}${SORT.k===k?(SORT.dir>0?' ↑':' ↓'):''}</button></th>`).join('')}</tr></thead><tbody>`;
+  for(const {u,m} of ms){
+    h+=`<tr data-id="${esc(u.id)}" tabindex="0" class="${SEL===u.id?'sel':''}"><td><span class="nm">${esc(m.name)}</span><span class="em">${esc(m.email)}</span></td><td>${m.hands}</td>
+    <td class="${m.net>0?'pos':m.net<0?'neg':''}">${m.net>0?'+':''}${Math.round(m.net*10)/10}</td>
+    <td class="${m.bb100>0?'pos':m.bb100<0?'neg':''}">${m.bb100==null?'—':(m.bb100>0?'+':'')+m.bb100.toFixed(1)}</td>
+    <td>${fmtPct(m.won)}</td><td>${fmtPct(m.vpip)}</td><td>${fmtPct(m.pfr)}</td><td>${scoreCell(m.score,m.dec)}</td>
+    ${m.st.map(x=>`<td>${scoreCell(x.v,x.d)}</td>`).join('')}<td>${ago(m.lastTs)}</td></tr>`;
+  }
+  h+=`</tbody></table></div><p class="note">VPIP = 翻前主动入池（跟注或加注）的手数比例；PFR = 翻前加注的比例。九人桌 GTO 大约是 VPIP 20% 左右、PFR 15% 左右。账号升级前合并进来的旧记录没有这两项，所以它们只按新记录计算。</p></section>`;
+  if(SEL){const u=USERS.find(x=>x.id===SEL);if(u)h+=detailHTML(u);}
+  app.innerHTML=h;
+  app.querySelectorAll('th button').forEach(b=>b.onclick=()=>{const k=b.dataset.k;SORT=SORT.k===k?{k,dir:-SORT.dir}:{k,dir:k==='name'?1:-1};render();});
+  app.querySelectorAll('tbody tr[data-id]').forEach(tr=>{const go=()=>{SEL=SEL===tr.dataset.id?null:tr.dataset.id;render();if(SEL){const d=$('#detail');if(d)d.scrollIntoView({behavior:'smooth',block:'start'});}};tr.onclick=go;tr.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}};});
+}
+function barRow(label,v,n,color,minN){
+  const w=v==null?0:Math.max(2,v*100);
+  return `<div class="bar${n<minN?' low':''}"><span>${label}</span><div class="t"><i style="width:${w}%;background:${color}"></i></div><b>${v==null?'—':Math.round(v*100)+'%'}</b></div>`;
+}
+function scoreColor(v){return v==null?'var(--dim)':v>=0.8?'var(--call)':v>=0.6?'var(--brass)':'var(--raise)';}
+function detailHTML(u){
+  const S=u.stats,m=metrics(u);
+  const misT=Object.values(S.mis).reduce((a,b)=>a+b,0);
+  const misSorted=Object.entries(S.mis).sort((a,b)=>b[1]-a[1]);
+  let key='';
+  if(misT>=5){const [k,n]=misSorted[0];key=`<div class="key">主要问题：<b>${MIS[k][0]}</b>，占全部失误的 ${Math.round(n/misT*100)}%（${MIS[k][1]}）。</div>`;}
+  else key=`<p class="muted">失误样本还太少（${misT} 次），多打一些再看主要问题。</p>`;
+  const stQ=m.st.map((x,i)=>({i,...x})).filter(x=>x.d>=10&&x.v!=null).sort((a,b)=>a.v-b.v);const stWorst=stQ.length>=2&&stQ[0].v<stQ[stQ.length-1].v?stQ[0]:null;
+  const posArr=POS.map((p,i)=>({p,d:S.pos['p'+i].d,v:pct(S.pos['p'+i].s,S.pos['p'+i].d)}));
+  const posQ=posArr.filter(x=>x.d>=20).sort((a,b)=>a.v-b.v);const posWorst=posQ.length>=2&&posQ[0].v<posQ[posQ.length-1].v?posQ[0]:null;
+  let h=`<section class="panel" id="detail"><h2>${esc(m.name)} 的分析 <small>${esc(m.email)}${u.createdAt&&u.createdAt.toDate?' · 注册于 '+ago(u.createdAt):''} · 最近活跃 ${ago(u.lastActive)}</small></h2>`;
+  h+=key;
+  const extra=[];if(stWorst)extra.push(`最弱的一条街是<b>${STREETS[stWorst.i]}</b>（${Math.round(stWorst.v*100)}%）`);if(posWorst)extra.push(`最弱的位置是 <b>${posWorst.p}</b>（${Math.round(posWorst.v*100)}%）`);
+  if(extra.length)h+=`<p class="muted">${extra.join('，')}。</p>`;
+  h+=`<div class="detail">
+  <div class="box"><h3>各条街</h3><table class="mini"><thead><tr><th>街</th><th>决策</th><th>得分</th><th>失误率</th></tr></thead><tbody>${m.st.map((x,i)=>`<tr><td>${STREETS[i]}</td><td>${x.d}</td><td>${scoreCell(x.v,x.d)}</td><td>${fmtPct(pct(x.b,x.d))}</td></tr>`).join('')}</tbody></table><p class="note">失误 = 评价为“偏离”或“错误”的决策。</p></div>
+  <div class="box"><h3>各位置决策得分</h3><div class="bars">${posArr.map(x=>barRow(x.p,x.v,x.d,scoreColor(x.v),20)).join('')}</div><p class="note">变淡的位置样本少于 20 个决策，仅供参考。</p></div>
+  <div class="box"><h3>失误类型（共 ${misT} 次）</h3><div class="bars">${misSorted.map(([k,n])=>barRow(MIS[k][0],misT?n/misT:null,misT,'var(--warn)',0)).join('')}</div><ul class="note" style="padding-left:16px;margin:0">${Object.keys(MIS).map(k=>`<li>${MIS[k][0]}：${MIS[k][1]}</li>`).join('')}</ul></div>
+  </div></section>`;
+  return h;
+}
+
+/* ---------- auth flow ---------- */
+function cfgOk(){const c=window.FIREBASE_CONFIG;return !!(window.firebase&&c&&c.apiKey&&!/填/.test(c.apiKey));}
+const AUTH_ERR={'auth/invalid-credential':'邮箱或密码不对。','auth/invalid-login-credentials':'邮箱或密码不对。','auth/wrong-password':'邮箱或密码不对。','auth/user-not-found':'这个邮箱还没有注册。','auth/invalid-email':'邮箱格式不对。','auth/network-request-failed':'连不上服务器，请检查网络。','auth/too-many-requests':'尝试次数太多，请过几分钟再试。'};
+function loginView(err){
+  app.innerHTML=`<div class="panel login"><h2>管理员登录</h2><form id="lf" novalidate><label for="le">邮箱<input id="le" type="email" autocomplete="email"></label><label for="lp">密码<input id="lp" type="password" autocomplete="current-password"></label>${err?`<p class="err">${esc(err)}</p>`:''}<button class="btn primary" type="submit">登录</button></form><p class="muted" style="font-size:12px">用你在牌桌上注册的账号登录。只有被设为管理员的账号能看到数据。</p></div>`;
+  $('#lf').onsubmit=async e=>{e.preventDefault();const b=e.target.querySelector('button');b.disabled=true;b.textContent='登录中…';
+    try{await firebase.auth().signInWithEmailAndPassword($('#le').value.trim(),$('#lp').value);}catch(er){loginView(AUTH_ERR[er.code]||('登录失败：'+er.message));}};
+}
+if(!cfgOk()){
+  app.innerHTML='<div class="panel"><p class="muted">还没有填写 Firebase 配置。请先按说明把配置写进 firebase-config.js，再打开这个页面。</p></div>';
+}else{
+  if(!firebase.apps.length)firebase.initializeApp(window.FIREBASE_CONFIG);
+  const db=firebase.firestore();try{db.enablePersistence({synchronizeTabs:true}).catch(()=>{});}catch(e){}
+  $('#outBtn').onclick=()=>firebase.auth().signOut();
+  firebase.auth().onAuthStateChanged(async u=>{
+    if(unsub){unsub();unsub=null;}
+    $('#outBtn').hidden=!u;$('#me').textContent=u?u.email:'';
+    if(!u)return loginView();
+    app.innerHTML='<p class="muted">检查管理员权限…</p>';
+    let ok=false;
+    try{ok=(await db.collection('admins').doc(u.uid).get()).exists;}catch(e){}
+    if(!ok){app.innerHTML=`<div class="panel"><h2>没有管理员权限</h2><p class="muted">账号 ${esc(u.email)} 不是管理员。如果这是你自己的账号，请按说明在 Firestore 的 admins 集合里添加这个用户 ID：</p><p style="font-family:var(--ff-num);word-break:break-all">${esc(u.uid)}</p></div>`;return;}
+    unsub=db.collection('users').onSnapshot(qs=>{
+      USERS=qs.docs.map(d=>{const x=d.data()||{};return Object.assign({id:d.id},x,{stats:addInto(blankStats(),x.stats||{})});});
+      render();
+    },e=>{app.innerHTML=`<div class="panel"><p class="err">读取数据失败：${esc(e.message)}</p><p class="muted">通常是 Firestore 安全规则没有按说明粘贴，或者还没发布。</p></div>`;});
+  });
+}
+</script>
+</body>
+</html>
