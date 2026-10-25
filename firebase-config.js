@@ -1,10 +1,10 @@
-// 把 Firebase 控制台里“firebaseConfig”的内容粘贴到下面，替换掉“填这里”。
+// Firebase 项目 poker-gto-bc7ab 的配置。
 // 这些值不是密码，放在公开网页里是正常的；数据安全由 Firestore 安全规则保证。
 window.FIREBASE_CONFIG = {
-  apiKey: "填这里",
-  authDomain: "填这里",
-  projectId: "填这里",
-  storageBucket: "填这里",
-  messagingSenderId: "填这里",
-  appId: "填这里"
+  apiKey: "AIzaSyCVtUWztiyFGPPjMg5OlCKq-m4cdSlp1Qo",
+  authDomain: "poker-gto-bc7ab.firebaseapp.com",
+  projectId: "poker-gto-bc7ab",
+  storageBucket: "poker-gto-bc7ab.firebasestorage.app",
+  messagingSenderId: "684468104986",
+  appId: "1:684468104986:web:3aacdbdbe3a2470e5f06a3"
 };
