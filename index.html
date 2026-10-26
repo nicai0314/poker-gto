@@ -806,7 +806,11 @@ function advisePost(pi,iters,detail){
     const vT=n===1?0.6:n===2?0.45:0.36,sT=vT+0.17;let kind;
     const cb=agg&&street===1&&n===1&&eq<sT?cbetPlan(p,B,tex,eq,vT,cl,ip):null;
     if(cb){kind='cbet';o=cb.o;why.push(...cb.why);}
-    else if(eq>=sT){kind='value';o={bet:.85,check:.15};why.push('胜率很高，主要用价值下注，从对手更差的牌里拿钱。');if(!tex.wet&&!river)why.push('干燥牌面可以偶尔过牌慢打，平衡你的过牌范围。');}
+    else if(eq>=sT){kind='value';o={bet:.85,check:.15};why.push('胜率很高，主要用价值下注，从对手更差的牌里拿钱。');
+      if(!tex.wet&&!river&&n===1&&eq>=0.9){
+        const bl=blockerNote(p.hole,B);o=bl?{bet:.5,check:.5}:{bet:.65,check:.35};
+        why.push(`你的牌几乎是坚果，而牌面干燥，对手很难在后面的牌反超你，给他一张免费牌的风险很小。${bl}所以可以经常过牌慢打：让他诈唬，或者在后面的街中牌后付钱。`);
+      }else if(!tex.wet&&!river)why.push('干燥牌面可以偶尔过牌慢打，平衡你的过牌范围。');}
     else if(eq>=vT){kind='thin';o={bet:.6,check:.4};why.push('牌力领先但不算坚果，以薄价值下注为主，也可以过牌控池。');}
     else if(eq>=vT-0.18){
       if(agg&&street===1&&n===1&&!tex.wet){kind='cbet';o={bet:.55,check:.45};why.push('你是翻前进攻者，干燥牌面你的范围更强，可以小注高频持续下注。');}
@@ -828,7 +832,13 @@ function advisePost(pi,iters,detail){
     // bluffs and semi-bluffs need everyone to fold: rarer with more opponents, and never as a big all-in into a crowd
     if((kind==='bluff'||kind==='semi')&&n>=2){const keep=kind==='semi'?(n===2?0.6:0.3):(n===2?0.35:0);o={bet:(o.bet||0)*keep};o.check=1-o.bet;
       why.push(`这是 ${n+1} 人底池，${kind==='semi'?'半诈唬':'诈唬'}要让所有人都弃牌才成功，所以比单挑时少下注${keep===0?'，这里直接过牌':''}。`);}
-    size=chooseSize(kind,{pot,eff,street,river,n,tex,eq,spr,max,pot3:G.raiseLevel>=2});
+    const vDist=kind==='value'&&n===1?rangeDist(opps[0],p.hole.concat(B)):null;
+    size=chooseSize(kind,{pot,eff,street,river,n,tex,eq,spr,max,pot3:G.raiseLevel>=2,dist:vDist});
+    if(size.vp&&eq<0.9){
+      const ev=size.vp.bestEv,d=vDist,better=d.strong||0;
+      if(ev<0.04){o={bet:.15,check:.85};why.length=0;why.push(`你的牌不弱，但他会跟注的牌里，比你好的（强牌约 ${pc(better)}）和比你差的差不多多，下注几乎赚不到钱。以过牌为主，用摊牌价值赢下他更差的牌。`);}
+      else if(ev<0.1){o={bet:.5,check:.5};why.length=0;why.push(`你的牌是中等偏强：能赢他的弱牌，但输给他约 ${pc(better)} 的强牌。下注只能赚一点点，所以过牌和小注薄价值混合；被加注时通常要弃牌。`);}
+    }
     if((kind==='bluff'||kind==='semi')&&size.allin&&n>=2){o={bet:(o.bet||0)*0.3};o.check=1-o.bet;}
     const to=size.to;
     opts=[{t:'check',f:o.check||0,label:'过牌'}];
@@ -839,9 +849,11 @@ function advisePost(pi,iters,detail){
     const Rf=(ip?1:0.92)*(n>=2?0.95:1);
     const drawy=!river&&(cl.b==='draw'||cl.b==='strongdraw');
     const effEq=eq*Rf+(drawy&&spr>3?0.05:0);
-    const rT=n===1?(river?0.8:0.72):n===2?0.58:0.48;
+    const betFrac=toCall/Math.max(1,pot-toCall),overbet=betFrac>=0.9;
+    const rT=(n===1?(river?0.8:0.72):n===2?0.58:0.48)+(overbet?0.1:0);
     const canRaise=p.stack>toCall&&others;
     if(effEq>=rT&&canRaise){o={raise:.65,call:.35};why.push('对估计范围的胜率很高，加注拿价值，同时保护手牌。');}
+    else if(overbet&&effEq>=rT-0.12&&canRaise){o={call:.85,raise:.15};why.push(`对手下了 ${Math.round(betFrac*100)}% 底池的大注。大注的范围是两极化的：很强的牌加上听牌和诈唬，中等牌很少。你加注时，他的强牌和听牌都会继续，弱牌本来就不在他的范围里；跟注能保留他的诈唬，你又有${ip?'位置':'足够的胜率'}，所以以跟注为主。`);}
     // margins scale with the price: facing a small bet a modest edge is enough, facing a big bet a larger one is needed
     else if(effEq>=potOdds+Math.max(0.025,potOdds*0.2)){
       if(!river&&cl.b==='strongdraw'&&canRaise){o={call:.7,raise:.3};why.push('强听牌可以偶尔半诈唬加注。');}else o={call:1};
@@ -851,8 +863,12 @@ function advisePost(pi,iters,detail){
     if(drawy)why.push('听牌有隐含赔率：中牌后还能赢到后面的下注，所以跟注门槛略低。');
     if(!ip&&n===1)why.push('你没有位置，后面街更难实现胜率，所以门槛稍微提高。');
     why.push(`MDF ${pc(mdf)}：你的整体范围大约要继续这么多，否则对手用任何两张牌诈唬都能赚钱。`);
-    let rt=round5(Math.max(G.currentBet*3,G.currentBet+G.minRaise));if(rt>=0.6*max)rt=max;
-    rsize=rt===max?['按 3 倍加注之后剩下的筹码已经不多，直接全下：对手要么用整个筹码跟注，要么弃牌，不给他便宜看牌的机会。']
+    let rt=round5(Math.max(G.currentBet*3,G.currentBet+G.minRaise));
+    const bigRaise=river&&effEq>=0.9;
+    if(bigRaise)rt=round5(Math.max(rt,G.currentBet+0.75*(pot+toCall)));
+    if(rt>=0.6*max)rt=max;
+    rsize=bigRaise?[`你几乎是坚果。河牌对手还会跟你加注的，基本都是很强的牌（比如葫芦），这些牌不管你加多少都会跟；更弱的牌加多加少都会弃。所以按底池加注到约 ${fmt(rt)}bb，比固定 3 倍拿到更多。`]
+      :rt===max?['按 3 倍加注之后剩下的筹码已经不多，直接全下：对手要么用整个筹码跟注，要么弃牌，不给他便宜看牌的机会。']
       :[`加注到对手下注的约 3 倍（${fmt(rt)}bb）。太小（2 倍左右）对手跟注只需要很少的胜率，听牌和弱牌都能便宜地继续；太大则对手的弱牌全部弃掉，只剩强牌继续，你的价值牌反而赢得少。`,
         river?'河牌加注几乎都是强牌或少量诈唬，3 倍左右让对手面对的价格和价值下注保持一致。':'翻后加注也在为后面的街铺路：3 倍左右让后面的街能自然地把筹码打进去。'];
     opts=[{t:'fold',f:o.fold||0,label:'弃牌'},{t:'call',f:o.call||0,amt:toCall,label:p.stack<=toCall?`跟注全下 ${fmt(toCall)}`:`跟注 ${fmt(toCall)}`}];
@@ -902,12 +918,73 @@ function cbetPlan(p,B,tex,eq,vT,cl,ip){
   return{o:{bet:f,check:1-f},why};
 }
 
+
+/* ---- value sizing from the opponent's estimated range ----
+   For each candidate size, estimate how often each part of his range keeps paying over the streets left
+   (weaker hands call less, and less often again on later streets), and pick the size that collects the most. */
+const VS_SIZES=[0.25,0.33,0.5,0.66,0.75,1,1.25];
+function callChance(b,s,street,t){
+  let c;
+  switch(b){
+    case 'strong':c=1-0.15*s;break;
+    case 'good':c=1-0.3*s;break;
+    case 'medium':c=0.95-0.9*s;break;
+    case 'weak':c=0.6-0.8*s;break;
+    case 'draw':c=street+t-1>=3?0.15-0.15*s:0.9-0.45*s;break;
+    default:c=0.15-0.15*s;
+  }
+  c=Math.min(1,Math.max(0,c));
+  return b==='strong'||b==='good'?c:Math.pow(c,t); // medium and weaker hands get more reluctant each street
+}
+// Value collected over the remaining streets when betting s now; on every later street the best size
+// (including all-in) is chosen again for whatever part of his range is still calling.
+function valueEV(dist,s,c){
+  const L=4-c.street,val=b=>b==='strong'?(c.eq>=0.9?1:-1):1; // unless near-nuts, his strongest hands are ahead of you
+  const memo=new Map();
+  function rest(alive,pot,left,t){
+    if(t>L||left<=0)return 0;
+    const key=t+'|'+Math.round(pot)+'|'+Math.round(left)+'|'+Object.values(alive).map(x=>x.toFixed(3)).join(',');
+    if(memo.has(key))return memo.get(key);
+    let best=0;
+    best=Math.max(0,rest(alive,pot,left,t+1)); // checking this street is always an option
+    for(const sz of VS_SIZES.concat([left/pot])){best=Math.max(best,step(alive,pot,left,t,sz));}
+    memo.set(key,best);return best;
+  }
+  function step(alive,pot,left,t,sz){
+    const bet=Math.min(sz*pot,left),f=bet/pot;let ev=0,callW=0;const nxt={};
+    for(const b in alive){const ch=callChance(b,f,c.street,t);ev+=alive[b]*ch*bet*val(b);nxt[b]=alive[b]*ch;callW+=nxt[b];}
+    return ev+(callW>0.001?rest(nxt,pot+2*bet,left-bet,t+1):0);
+  }
+  const start={};for(const b in dist)if(dist[b])start[b]=dist[b];
+  return step(start,c.pot,c.eff,1,s)/c.pot;
+}
+function valueSizePlan(c){
+  const d=c.dist,evs=VS_SIZES.map(s=>({s,ev:valueEV(d,s,c)}));
+  let best=evs.reduce((a,b)=>b.ev>a.ev?b:a);
+  const R=[],L=4-c.street;
+  const cont=(d.strong||0)+(d.good||0),mid=(d.medium||0)+(d.weak||0);
+  R.push(`对手估计范围：强牌（两对+）${pc(d.strong||0)}、好牌 ${pc(d.good||0)}、中等成牌 ${pc(d.medium||0)}、弱对 ${pc(d.weak||0)}、听牌 ${pc(d.draw||0)}、空气 ${pc(d.air||0)}。`);
+  if(mid>cont+0.2)R.push(`他的范围以中等成牌和弱对子为主，这些牌${L>1?'愿意跟一两次小注，但面对大注或者连续几条街的下注就会弃牌':'面对大注会弃牌'}。所以用 ${Math.round(best.s*100)}% 左右的${best.s<=0.5?'小':'中等'}尺度，${L>1?'让它们在几条街都继续付钱':'让更多这样的牌跟注'}，总共赢得最多。`);
+  else if(cont>=0.35)R.push(`他的范围里有不少好牌和强牌，这些牌面对大注也会跟，所以可以用 ${Math.round(best.s*100)}% 这样较大的尺度${L>1?'，几条街下来把更多筹码打进去':''}。`);
+  else R.push(`综合他范围里各类牌愿意跟注的程度，${Math.round(best.s*100)}% 左右能赢得最多。`);
+  if(c.tex.wet&&c.street<3&&(d.draw||0)>=0.15&&best.s<0.5){best={s:0.5,ev:valueEV(d,0.5,c)};R.push(`不过他的范围里听牌有 ${pc(d.draw)}，至少下 50% 底池，不让听牌便宜地看下一张牌。`);}
+  return{f:best.s,R,evs,bestEv:best.ev};
+}
+function blockerNote(hole,B){
+  const hi=Math.max(...B.map(c=>c>>2)),onB=B.filter(c=>(c>>2)===hi).length,inH=hole.filter(c=>(c>>2)===hi).length;
+  if(inH>=1&&onB+inH>=3)return `你手里有 ${inH} 张 ${rankCN(hi)}，牌面上有 ${onB} 张，对手最多只剩 ${4-onB-inH} 张 ${rankCN(hi)}，几乎不可能中顶对，能跟你大注的牌很少。`;
+  return '';
+}
+
 /* ================= bet sizing (with reasons) ================= */
 const SIZE_LIST=[0.33,0.5,0.75,1,1.5];
 function chooseSize(kind,c){
   const R=[];let f;const left=4-c.street;
   const geo=c.pot>0?(Math.pow(2*c.eff/c.pot+1,1/left)-1)/2:1;
-  if(c.river){
+  if(kind==='value'&&c.n===1&&c.dist){
+    const vp=valueSizePlan(c);f=vp.f;R.push(...vp.R);c.vp=vp;
+    if(c.eq<0.9&&(c.dist.strong||0)>=0.1)R.push(`注意他有约 ${pc(c.dist.strong)} 的牌比你好，这些牌会跟注甚至加注；下得越大，被更好的牌跟注的损失越大，所以尺度要克制。`);
+  }else if(c.river){
     if(kind==='value'){
       f=0.75;R.push('河牌之后没有牌要发，你的下注范围是两极化的：要么是强牌，要么是诈唬。用大尺度，强牌能从对手的抓诈牌里拿到最多。');
       if(c.eq>=0.85){f=1;R.push('你的牌接近坚果，几乎不怕被更好的牌跟注，所以可以下满池。对手的强牌在河牌大多还是会跟。');}
@@ -944,12 +1021,17 @@ function chooseSize(kind,c){
   else if(to>=0.7*c.max){to=c.max;allin=true;R.push('按这个尺度下注后剩下的筹码已经很少，直接全下更好，不给对手便宜看下一张牌的机会。');}
   const table=SIZE_LIST.map(x=>({x,need:x/(1+2*x),fold:x/(1+x),verdict:sizeVerdict(kind,x,f,c)}));
   if(!SIZE_LIST.some(x=>Math.abs(x-f)<0.04))table.push({x:f,need:f/(1+2*f),fold:f/(1+f),verdict:'推荐'}),table.sort((a,b)=>a.x-b.x);
-  return{f,to,allin,kind,R,table};
+  return{f,to,allin,kind,R,table,vp:c.vp||null};
 }
 function sizeVerdict(kind,x,f,c){
   if(Math.abs(x-f)<0.04)return'推荐';
   const small=x<f;
   if(Math.abs(x-f)<=0.12&&!(kind==='cbet'))return small?'略小，也可以':'略大，也可以';
+  if(kind==='value'&&c.vp){
+    const ev=valueEV(c.dist,x,c),r=ev/Math.max(1e-9,c.vp.bestEv);
+    if(r>=0.93)return small?'略小，也可以':'略大，也可以';
+    return small?'偏小：少赢价值':`偏大：能跟的牌变少，少赢 ${Math.round((1-r)*100)}% 价值`;
+  }
   switch(kind){
     case 'value':
       if(small)return c.tex.wet&&!c.river?'偏小：听牌拿到便宜价格，你也少赢价值':'偏小：少赢价值';
@@ -1110,15 +1192,20 @@ function pfUpdate(p,adv,t){
   const arr=adv.pre.arr,fl=p.isUser?0.03:(adv.pre.floor||0);
   for(let k=0;k<169;k++){const f=arr?arr[k][key]:mergedFreq(adv.pre.tbl,k,adv.pre.m)[key];p.pfW[k]*=Math.max(f,fl);}
 }
-function narrow(p,t){
+// How the size of a bet or raise shapes the range behind it: big bets are polarised (strong hands and draws,
+// few medium hands); small bets are merged (more medium hands and range bets).
+const POLAR={strong:1.25,good:0.8,medium:0.45,weak:0.5,strongdraw:1.25,draw:1.1,weakdraw:0.8,air:0.75};
+const MERGED={strong:0.9,good:1,medium:1.2,weak:1.2,strongdraw:1,draw:1,weakdraw:1.05,air:1.1};
+function narrow(p,t,frac){
   const tb=(t==='bet'||t==='raise')?AGG:t==='call'?CALLM:CHECKM;const B=G.board,st=styleOf(p),plain=st===STYLE_DEF.gto;
-  for(const c of p.combos){if(c[2]<=0)continue;if(B.includes(c[0])||B.includes(c[1])){c[2]=0;continue;}const b=classify(c[0],c[1],B).b;c[2]*=plain?tb[b]:styleMult(tb[b],t,b,st,Math.max(c[0],c[1])>>2===12);}
+  const sz=(t==='bet'||t==='raise')&&frac!=null?(frac>=0.9?POLAR:frac<=0.4?MERGED:null):null;
+  for(const c of p.combos){if(c[2]<=0)continue;if(B.includes(c[0])||B.includes(c[1])){c[2]=0;continue;}const b=classify(c[0],c[1],B).b;c[2]*=(plain?tb[b]:styleMult(tb[b],t,b,st,Math.max(c[0],c[1])>>2===12))*(sz?sz[b]:1);}
 }
 function commit(pi,adv,t,to){
-  const p=P[pi];
+  const p=P[pi],potBefore=potTotal(),betBefore=p.bet;
   if(G.street===0)pfUpdate(p,adv,t);
   act(pi,t,to);
-  if(G.street>0&&t!=='fold')narrow(p,t==='check'?'check':t);
+  if(G.street>0&&t!=='fold')narrow(p,t==='check'?'check':t,(p.bet-betBefore)/Math.max(1,potBefore));
   afterAction(pi);
 }
 function sample(opts){let x=Math.random(),acc=0;for(const o of opts){acc+=o.f;if(x<acc)return o;}return opts.reduce((a,b)=>b.f>a.f?b:a);}
@@ -1644,8 +1731,19 @@ function renderOpp(){
 
 /* ================= version & changelog ================= */
 // Newest first. Each update: bump APP_VERSION and add an entry at the top.
-const APP_VERSION='1.5.1';
+const APP_VERSION='1.5.3';
 const CHANGELOG=[
+  {v:'1.5.3',date:'2026-10-26',items:[
+    ['修复','估计对手的下注范围时没有看下注尺度：现在大注（接近或超过底池）按两极化范围处理（强牌和听牌多、中等牌少），小注范围更宽。'],
+    ['修复','面对超池下注时，顶对强踢脚这类牌会被建议加注：现在以跟注为主，加注需要更强的牌。'],
+    ['修复','价值下注只算比你差的牌跟注带来的收益，没扣除被更好的牌跟注的损失：河牌同花、顺子成型后，顶对还建议 75% 底池下注。现在这种中等偏强的牌会以过牌或小注为主。']
+  ]},
+  {v:'1.5.2',date:'2026-10-25',items:[
+    ['修复','价值下注尺度只看自己的牌力：胜率高就套"几何尺度把筹码打光"，不看对手范围里有多少牌能跟（例如 AA 在 A64 上建议 64%，转牌甚至 124% 超池）。'],
+    ['改进','价值下注尺度改为按对手估计范围计算：看他范围里每类牌愿意跟多少、跟几条街，并且逐街规划（比如转牌用中等尺度，河牌再对强牌全下）。尺度对比表会显示每个尺度少赢多少价值。'],
+    ['改进','坚果牌在干燥牌面上更多慢打；如果你的手牌挡住了对手中顶对的可能（比如拿 AA 在 A 高牌面上），理由里会说明。'],
+    ['改进','河牌拿着接近坚果的牌被下注时，按底池大小加注，而不是固定 3 倍。']
+  ]},
   {v:'1.5.1',date:'2026-10-25',items:[
     ['修复','LJ、HJ、CO 面对开池时平跟太多、3bet 太少（例如 HJ 的 AQo 被判为纯跟注）：这些位置后面还有人，现在以 3bet 或弃牌为主；庄位仍保留较多平跟。'],
     ['修复','翻牌持续下注没有考虑谁是翻前进攻者、谁有范围优势：现在 3bet 底池和有大牌的干燥牌面上，进攻方会小注高频持续下注，理由里会说明这手牌有没有高张和后门听牌。'],
