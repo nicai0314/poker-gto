@@ -797,14 +797,16 @@ function advisePost(pi,iters,detail){
   const eq=equityMC(p.hole,B,opps.map(q=>q.combos),iters);
   const pot=potTotal(),toCall=Math.min(G.currentBet-p.bet,p.stack),max=p.stack+p.bet;
   const cl=classify(p.hole[0],p.hole[1],B),tex=texture(B),street=G.street,river=street===3;
-  const ip=isIP(pi),agg=G.aggr[street-1]===pi;
+  let lastAgg=-1;for(let k=street-1;k>=0;k--)if(G.aggr[k]>=0){lastAgg=G.aggr[k];break;}
+  const ip=isIP(pi),agg=lastAgg===pi;
   const eff=Math.min(p.stack,Math.max(0,...opps.map(q=>q.stack)));
   const spr=pot>0?eff/pot:0;
   const others=opps.some(q=>!q.allIn);
   const why=[];let o,opts,potOdds=null,mdf=null,size=null,rsize=null;
   if(toCall===0){
     const vT=n===1?0.6:n===2?0.45:0.36,sT=vT+0.17;let kind;
-    const cb=agg&&street===1&&n===1&&eq<sT?cbetPlan(p,B,tex,eq,vT,cl,ip):null;
+    const delayed=street===2&&n===1&&G.aggr[1]<0&&G.aggr[0]===pi&&eq<sT,barrel=street===2&&n===1&&G.aggr[1]===pi&&eq<sT;
+    const cb=agg&&street===1&&n===1&&eq<sT?cbetPlan(p,B,tex,eq,vT,cl,ip):delayed?turnPlan(p,B,tex,eq,vT,cl,ip,'delayed'):barrel?turnPlan(p,B,tex,eq,vT,cl,ip,'barrel'):null;
     if(cb){kind='cbet';o=cb.o;why.push(...cb.why);}
     else if(eq>=sT){kind='value';o={bet:.85,check:.15};why.push('胜率很高，主要用价值下注，从对手更差的牌里拿钱。');
       if(!tex.wet&&!river&&n===1&&eq>=0.9){
@@ -974,6 +976,31 @@ function blockerNote(hole,B){
   const hi=Math.max(...B.map(c=>c>>2)),onB=B.filter(c=>(c>>2)===hi).length,inH=hole.filter(c=>(c>>2)===hi).length;
   if(inH>=1&&onB+inH>=3)return `你手里有 ${inH} 张 ${rankCN(hi)}，牌面上有 ${onB} 张，对手最多只剩 ${4-onB-inH} 张 ${rankCN(hi)}，几乎不可能中顶对，能跟你大注的牌很少。`;
   return '';
+}
+
+
+// Turn plan for the player with the initiative, heads-up, without a strong made hand.
+// 'delayed': flop checked through and he checked the turn again; 'barrel': you bet the flop and got called.
+function turnPlan(p,B,tex,eq,vT,cl,ip,mode){
+  const turn=B[3],tr=turn>>2,flop=B.slice(0,3),fHi=Math.max(...flop.map(c=>c>>2));
+  const sc=[0,0,0,0];for(const c of B)sc[c&3]++;const fsc=[0,0,0,0];for(const c of flop)fsc[c&3]++;
+  const flushNew=Math.max(...sc)>=3&&Math.max(...fsc)<3;
+  const paired=flop.some(c=>(c>>2)===tr),connects=!paired&&tr<=8&&flop.some(c=>Math.abs((c>>2)-tr)<=2);
+  let base=mode==='delayed'?(ip?0.65:0.55):(ip?0.55:0.45);
+  const why=[];
+  if(mode==='delayed')why.push(`翻牌双方都过牌，转牌他又过牌。他连续两次没有下注，范围里大部分是没中的牌；而你是翻前加注者，${ip?'又有位置，':''}重新拿回主动权。这种"延迟持续下注"在 GTO 里频率很高。`);
+  else why.push('你翻牌下注被跟注，他的范围已经去掉了大部分空气，剩下的多是中等牌和听牌。转牌要不要继续下注（第二枪），要看这张牌对谁有利，以及你的牌有没有改进机会。');
+  if(tr>=10&&tr>fHi){base+=0.1;why.push(`转牌 ${rankCN(tr)} 是一张大牌：翻前加注方的范围里带 ${rankCN(tr)} 的强牌更多，这张牌对你的范围更有利。`);}
+  else if(flushNew||connects){base-=0.15;why.push(`转牌 ${cardTxt(turn)} ${flushNew?'带来了同花听牌':'和牌面连了起来，带来更多顺子和两对'}，对跟注方的范围更有利，下注频率要降低。`);}
+  const r1=p.hole[0]>>2,r2=p.hole[1]>>2,hiB=Math.max(...B.map(c=>c>>2)),over=Math.min(r1,r2)>hiB,aceOver=Math.max(r1,r2)===12&&12>hiB;
+  const b=cl.b;let f;
+  if(b==='strongdraw'||b==='draw'){f=Math.min(0.85,base+0.15);why.push('你有听牌：下注能让他弃牌，被跟注后河牌还有补牌。');}
+  else if(eq>=vT||b==='good'||b==='medium'){f=base*(mode==='delayed'?0.85:0.65);why.push(mode==='delayed'?'你的牌有一定价值：下注能从他更差的牌里拿薄价值，也能保护手牌。':'你的牌有一定摊牌价值，不一定要继续下注：一部分下注拿价值，一部分过牌控制底池。');}
+  else if(b==='weak'){f=base*0.5;why.push('弱对子有一点摊牌价值，下注频率低一些。');}
+  else if(b==='weakdraw'||over||aceOver){f=base*(mode==='delayed'?1:0.75);why.push(`这手牌${b==='weakdraw'?'有卡顺听牌':over?'两张都是高张':'有一张 A'}，被跟注后河牌还有改进机会，适合作为诈唬下注。`);}
+  else{f=base*(mode==='delayed'?0.6:0.35);why.push(mode==='delayed'?'完全没有改进机会的空气，下注频率低一些。':'没有听牌、也没有高张，被跟注后几乎没有改进机会，以过牌为主。');}
+  f=Math.max(0,Math.min(0.9,f));
+  return{o:{bet:f,check:1-f},why};
 }
 
 /* ================= bet sizing (with reasons) ================= */
@@ -1731,8 +1758,13 @@ function renderOpp(){
 
 /* ================= version & changelog ================= */
 // Newest first. Each update: bump APP_VERSION and add an entry at the top.
-const APP_VERSION='1.5.3';
+const APP_VERSION='1.5.4';
 const CHANGELOG=[
+  {v:'1.5.4',date:'2026-10-26',items:[
+    ['修复','翻牌双方都过牌后，程序以为翻前加注者"没有主动权"：现在主动权会一直保留到有人下注为止。'],
+    ['新增','转牌"延迟持续下注"：翻牌过牌、转牌对手又过牌时，翻前加注者会高频率下注，理由里说明他连续过牌、范围很弱。'],
+    ['新增','转牌"第二枪"：翻牌下注被跟注后，转牌要不要继续下注，会看这张牌对谁有利（大牌对加注方有利，连张和同花牌对跟注方有利）以及你的牌有没有改进机会。']
+  ]},
   {v:'1.5.3',date:'2026-10-26',items:[
     ['修复','估计对手的下注范围时没有看下注尺度：现在大注（接近或超过底池）按两极化范围处理（强牌和听牌多、中等牌少），小注范围更宽。'],
     ['修复','面对超池下注时，顶对强踢脚这类牌会被建议加注：现在以跟注为主，加注需要更强的牌。'],
