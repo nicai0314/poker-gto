@@ -495,6 +495,12 @@ function classify(h1,h2,B){
   return{b,d,draw:dl.join(' + ')};
 }
 const AGG={strong:1,good:.85,strongdraw:.85,medium:.4,draw:.55,weak:.2,weakdraw:.3,air:.22};
+// raises (check-raises especially) are much stronger than bets: value hands plus bluffs that carry draws, very little pure air
+const RAISEM={strong:1,good:.55,strongdraw:.9,medium:.12,draw:.55,weak:.08,weakdraw:.3,air:.05};
+// the preflop raiser's continuation bet is wide (many air hands bet), a turn barrel is in between
+const CBETM_DRY={strong:1,good:.9,strongdraw:.95,medium:.65,draw:.85,weak:.55,weakdraw:.7,air:.65};
+const CBETM_WET={strong:1,good:.9,strongdraw:.95,medium:.5,draw:.85,weak:.35,weakdraw:.55,air:.35};
+const BARRELM={strong:1,good:.85,strongdraw:.9,medium:.45,draw:.75,weak:.25,weakdraw:.5,air:.3};
 const CALLM={strong:.55,good:1,strongdraw:.8,medium:.9,draw:.85,weak:.5,weakdraw:.35,air:.08};
 const CHECKM={strong:.45,good:.7,strongdraw:.6,medium:1,draw:.8,weak:1,weakdraw:1,air:1};
 const BUCKET_UI=[['strong','强牌（两对+）'],['good','好牌（超对/顶对强踢脚）'],['medium','中等成牌'],['draw','听牌'],['weak','弱对'],['air','空气']];
@@ -848,10 +854,16 @@ function advisePost(pi,iters,detail){
     else opts[0].f=1;
   }else{
     potOdds=toCall/(pot+toCall);mdf=Math.max(0,(pot-toCall)/pot);
-    const Rf=(ip?1:0.92)*(n>=2?0.95:1);
+    const facingRaise=G.aggr[street]>=0&&p.bet>0; // you bet and got raised
+    const betFrac=toCall/Math.max(1,pot-toCall);
+    // hands that rarely improve realise less when more betting is likely to follow; top pair and overpairs are exempt
+    const oneWay=!river&&(cl.b==='medium'||cl.b==='weak'||cl.b==='air')&&!/顶对|超对/.test(cl.d)&&spr>2;
+    const disc=!oneWay?1:facingRaise?0.6:betFrac>=0.9?0.78:betFrac>=0.5?0.88:0.95;
+    const Rf=(ip?1:0.92)*(n>=2?0.95:1)*disc;
     const drawy=!river&&(cl.b==='draw'||cl.b==='strongdraw');
     const effEq=eq*Rf+(drawy&&spr>3?0.05:0);
-    const betFrac=toCall/Math.max(1,pot-toCall),overbet=betFrac>=0.9;
+    const eqT=Math.abs(effEq-eq)>0.02?`胜率 ${pc(eq)}（按能兑现的程度折算后约 ${pc(effEq)}）`:`胜率 ${pc(eq)}`;
+    const overbet=betFrac>=0.9;
     const rT=(n===1?(river?0.8:0.72):n===2?0.58:0.48)+(overbet?0.1:0);
     const canRaise=p.stack>toCall&&others;
     if(effEq>=rT&&canRaise){o={raise:.65,call:.35};why.push('对估计范围的胜率很高，加注拿价值，同时保护手牌。');}
@@ -859,12 +871,18 @@ function advisePost(pi,iters,detail){
     // margins scale with the price: facing a small bet a modest edge is enough, facing a big bet a larger one is needed
     else if(effEq>=potOdds+Math.max(0.025,potOdds*0.2)){
       if(!river&&cl.b==='strongdraw'&&canRaise){o={call:.7,raise:.3};why.push('强听牌可以偶尔半诈唬加注。');}else o={call:1};
-      why.push(`胜率 ${pc(eq)} 明显高于跟注所需的 ${pc(potOdds)}，跟注长期赚钱。`);
-    }else if(effEq>=potOdds-Math.max(0.02,potOdds*0.08)){o={call:.5,fold:.5};why.push(`胜率 ${pc(eq)} 和所需的 ${pc(potOdds)} 很接近，属于边缘牌，跟注和弃牌混合。`);}
-    else{o={fold:1};why.push(`胜率 ${pc(eq)} 低于跟注所需的 ${pc(potOdds)}，长期跟注会亏。`);}
+      why.push(`${eqT}明显高于跟注所需的 ${pc(potOdds)}，跟注长期赚钱。`);
+    }else{
+      // between "clearly fold" and "clearly call" the frequencies blend smoothly instead of jumping
+      const hi=potOdds+Math.max(0.025,potOdds*0.2),lo=potOdds-Math.max(0.04,potOdds*0.15);
+      if(effEq>=lo){const c=0.15+0.7*Math.min(1,(effEq-lo)/(hi-lo));o={call:c,fold:1-c};why.push(`${eqT}和所需的 ${pc(potOdds)} 很接近，属于边缘牌，跟注和弃牌混合。`);}
+      else if(effEq>=lo-0.06){o={call:.1,fold:.9};why.push(`${eqT}低于跟注所需的 ${pc(potOdds)}，以弃牌为主；差得不多，偶尔跟注也说得过去。`);}
+      else{o={fold:1};why.push(`${eqT}低于跟注所需的 ${pc(potOdds)}，长期跟注会亏。`);}
+    }
     if(drawy)why.push('听牌有隐含赔率：中牌后还能赢到后面的下注，所以跟注门槛略低。');
     if(!ip&&n===1)why.push('你没有位置，后面街更难实现胜率，所以门槛稍微提高。');
-    why.push(`MDF ${pc(mdf)}：你的整体范围大约要继续这么多，否则对手用任何两张牌诈唬都能赚钱。`);
+    if(oneWay&&disc<0.9)why.push(`你的牌是${cl.d}，${cl.b==='air'?'没有对子也没有听牌，':''}后面很少能改进，而跟注后还剩 SPR ${spr.toFixed(1)}：他${facingRaise?'加注之后，':''}转牌、河牌很可能继续下注，你很难跟到摊牌。名义上的胜率实际兑现不了多少，所以按打折后的胜率来判断。`);
+    why.push(`MDF ${pc(mdf)} 是对你整个范围的要求：整体要继续这么多，对手才不能用任何牌诈唬获利。它不是每手牌的跟注标准，范围里最弱的那部分牌本来就该弃。`);
     let rt=round5(Math.max(G.currentBet*3,G.currentBet+G.minRaise));
     const bigRaise=river&&effEq>=0.9;
     if(bigRaise)rt=round5(Math.max(rt,G.currentBet+0.75*(pot+toCall)));
@@ -1223,16 +1241,18 @@ function pfUpdate(p,adv,t){
 // few medium hands); small bets are merged (more medium hands and range bets).
 const POLAR={strong:1.25,good:0.8,medium:0.45,weak:0.5,strongdraw:1.25,draw:1.1,weakdraw:0.8,air:0.75};
 const MERGED={strong:0.9,good:1,medium:1.2,weak:1.2,strongdraw:1,draw:1,weakdraw:1.05,air:1.1};
-function narrow(p,t,frac){
-  const tb=(t==='bet'||t==='raise')?AGG:t==='call'?CALLM:CHECKM;const B=G.board,st=styleOf(p),plain=st===STYLE_DEF.gto;
-  const sz=(t==='bet'||t==='raise')&&frac!=null?(frac>=0.9?POLAR:frac<=0.4?MERGED:null):null;
+function narrow(p,t,frac,ctxBet){
+  const tb=t==='raise'?RAISEM:t==='bet'?(ctxBet==='cbet'?(texture(G.board).wet?CBETM_WET:CBETM_DRY):ctxBet==='barrel'?BARRELM:AGG):t==='call'?CALLM:CHECKM;const B=G.board,st=styleOf(p),plain=st===STYLE_DEF.gto;
+  const sz=t==='bet'&&frac!=null?(frac>=0.9?POLAR:frac<=0.4?MERGED:null):null;
   for(const c of p.combos){if(c[2]<=0)continue;if(B.includes(c[0])||B.includes(c[1])){c[2]=0;continue;}const b=classify(c[0],c[1],B).b;c[2]*=(plain?tb[b]:styleMult(tb[b],t,b,st,Math.max(c[0],c[1])>>2===12))*(sz?sz[b]:1);}
 }
 function commit(pi,adv,t,to){
   const p=P[pi],potBefore=potTotal(),betBefore=p.bet;
+  let ctxBet=null;
+  if(G.street>0&&t==='bet'){let la=-1;for(let k=G.street-1;k>=0;k--)if(G.aggr[k]>=0){la=G.aggr[k];break;}if(la===pi)ctxBet=G.street===1?'cbet':'barrel';}
   if(G.street===0)pfUpdate(p,adv,t);
   act(pi,t,to);
-  if(G.street>0&&t!=='fold')narrow(p,t==='check'?'check':t,(p.bet-betBefore)/Math.max(1,potBefore));
+  if(G.street>0&&t!=='fold')narrow(p,t==='check'?'check':t,(p.bet-betBefore)/Math.max(1,potBefore),ctxBet);
   afterAction(pi);
 }
 function sample(opts){let x=Math.random(),acc=0;for(const o of opts){acc+=o.f;if(x<acc)return o;}return opts.reduce((a,b)=>b.f>a.f?b:a);}
@@ -1758,8 +1778,19 @@ function renderOpp(){
 
 /* ================= version & changelog ================= */
 // Newest first. Each update: bump APP_VERSION and add an entry at the top.
-const APP_VERSION='1.5.4';
+const APP_VERSION='1.5.6';
 const CHANGELOG=[
+  {v:'1.5.6',date:'2026-10-27',items:[
+    ['修复','对手"持续下注"的范围被估计得太强（当成普通下注处理）：现在翻前加注者的持续下注、转牌第二枪、普通下注、加注分别估计。例如 BB 拿 55 面对 33% 的小注持续下注，现在建议跟注。'],
+    ['修复','上一版的"胜率兑现"折扣打得太狠：现在随下注大小变化，面对小注几乎不打折，面对大注和加注才打得多；顶对和超对不打折。'],
+    ['改进','边缘局面给出混合频率，不再直接 100% 弃牌或跟注。偶尔选另一边会判为"偏离"，而不是"错误"。'],
+    ['改进','新增回归题库：每次更新前，会用之前讨论过的牌例（21 项）自动检查建议有没有倒退。']
+  ]},
+  {v:'1.5.5',date:'2026-10-27',items:[
+    ['修复','对手加注（尤其是过牌加注）的范围估计得太弱：加注现在单独按更强、更两极化的范围估计（价值牌加带听牌的诈唬，纯空气很少）。'],
+    ['修复','面对下注只看当前这条街的底池赔率：小对子、没中的高张这类很难改进的牌，后面还要面对继续下注时，胜率按"能兑现多少"打折。例如 55 在 A93 上面对过牌加注，现在建议弃牌。'],
+    ['改进','理由里同时写出原始胜率和打折后的胜率；MDF 的说明改为"这是对整个范围的要求，不是每手牌的跟注标准"。']
+  ]},
   {v:'1.5.4',date:'2026-10-26',items:[
     ['修复','翻牌双方都过牌后，程序以为翻前加注者"没有主动权"：现在主动权会一直保留到有人下注为止。'],
     ['新增','转牌"延迟持续下注"：翻牌过牌、转牌对手又过牌时，翻前加注者会高频率下注，理由里说明他连续过牌、范围很弱。'],
