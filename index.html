@@ -628,6 +628,18 @@ function raiserEq3(ri,oi){
   }
   return G.eqCache[key]=out;
 }
+// equity of every hand class vs several players' estimated ranges at once (raiser + players already in the pot)
+function eqVsN(ids){
+  const key='N'+ids.join(',')+':'+G.raiseTo.length;
+  if(G.eqCache[key])return G.eqCache[key];
+  const rs=ids.map(i=>buildCombos(P[i].pfW,false)),out=new Float32Array(169);
+  for(let k=0;k<169;k++){
+    const i=Math.floor(k/13),j=k%13,r1=12-i,r2=12-j;
+    const h=i===j?[r1*4,r1*4+1]:i<j?[r1*4,r2*4]:[r2*4,r1*4+1];
+    out[k]=equityMC(h,[],rs,150);
+  }
+  return G.eqCache[key]=out;
+}
 function raiserEq(ri){
   const key=ri+':'+G.raiseTo.length;
   if(G.eqCache[key])return G.eqCache[key];
@@ -665,24 +677,29 @@ function approxCtx(pi,sub){
   const bp=P.filter(q=>q.i!==pi&&q.i!==ri&&!q.folded&&!q.allIn&&(!q.acted||q.bet<G.currentBet)),behind=bp.length;
   const ip=order(pi)>order(ri),allin=R.allIn||toCall>=p.stack;
   const eqA=raiserEq(ri);
+  // players who already put the full amount in (called the raise, or are all-in) are certain opponents
+  const ins=P.filter(q=>q.i!==pi&&q.i!==ri&&!q.folded&&!bp.includes(q)).map(q=>q.i).slice(0,5),nIn=ins.length;
+  const eqK=nIn?eqVsN([ri,...ins]):eqA;
   // players still to act may come along (each about 35% of the time). Equity vs n opponents is extrapolated from
   // heads-up and 3-way equity: every expected extra caller cuts it by the same ratio as going from heads-up to 3-way.
-  const mExp=0.35*behind,pCall=behind?1-Math.pow(0.65,behind):0,eqM=behind?raiserEq3(ri,bp[0].i):null;
+  const mExp=0.35*behind,pCall=behind?1-Math.pow(0.65,behind):0,eqM=behind?(nIn?eqVsN([ri,...ins,bp[0].i]):raiserEq3(ri,bp[0].i)):null;
   const callAmt=behind?bp.reduce((a,q)=>a+Math.max(0,G.currentBet-q.bet),0)/behind:0;
   const needM=behind?toCall/(pot+toCall+mExp*callAmt):need;
   // after calling, a low stack-to-pot ratio means the hand is close to all-in and realises nearly all its equity
-  const spr=(p.stack-toCall)/Math.max(1,pot+toCall),commit=Math.min(1,Math.max(0,(3.5-spr)/3.5));
-  const tR=0.6+0.02*behind;
+  const spr=(p.stack-toCall)/Math.max(1,pot+toCall),extra=nIn+mExp;
+  // low SPR only guarantees realisation heads-up: multiway, there are still several players who can bet you off the hand
+  const commit=Math.min(1,Math.max(0,(3.5-spr)/3.5))*Math.max(0,1-0.5*extra);
+  const tR=0.6+0.02*behind+0.02*nIn;
   const r=new Float32Array(169),c=new Float32Array(169),realA=new Float32Array(169),eqE=new Float32Array(169);
   for(let k=0;k<169;k++){
     const i=Math.floor(k/13),j=k%13,pair=i===j,suited=i<j,gap=Math.abs(i-j);
-    const e=behind?eqA[k]*Math.pow(Math.min(1,eqM[k]/Math.max(0.01,eqA[k])),mExp):eqA[k];eqE[k]=e;
+    const e=behind?eqK[k]*Math.pow(Math.min(1,eqM[k]/Math.max(0.01,eqK[k])),mExp):eqK[k];eqE[k]=e;
     let real;
     if(allin)real=1;
     else{
       // strong hands realise more of their equity, weak offsuit hands less; pairs and suited hands hold up better multiway
       real=(ip?0.92:0.78)+0.6*(eqA[k]-0.45);
-      const mw=Math.min(1,mExp);if(pair)real+=0.04+0.05*mw;else if(suited)real+=0.05+0.03*mw;else{real-=0.07*mw;if(gap>2&&Math.max(i,j)>3)real-=0.04+0.04*mw;}
+      const mw=Math.min(1.5,extra);if(pair)real+=0.04+0.05*mw;else if(suited)real+=0.05+0.03*mw;else{real-=0.07*mw;if(gap>2&&Math.max(i,j)>3)real-=0.04+0.04*mw;}
       real=Math.min(1.15,Math.max(0.5,real));
       real+=(Math.max(real,1)-real)*commit;
     }
@@ -691,7 +708,7 @@ function approxCtx(pi,sub){
     const rz=allin?0:Math.min(1,Math.max(0,(eqA[k]-tR)/0.05+0.5));
     r[k]=rz;c[k]=Math.max(cont,rz)-rz;
   }
-  return{kind:'approx',sub,approx:true,ri,need,needM,pCall,mExp,spr,behind,ip,allin,eqA,eqE,realA,tbl:{r,c}};
+  return{kind:'approx',sub,approx:true,ri,need,needM,pCall,mExp,spr,behind,nIn,commit,ip,allin,eqA,eqE,realA,tbl:{r,c}};
 }
 function pfRaiseTo(pi,ctx){
   const p=P[pi],max=p.stack+p.bet,cb=G.currentBet;let to;
@@ -732,12 +749,13 @@ function approxReasons(ctx,k,fr,p){
   if(ctx.sub==='vsOddOpen'||ctx.sub==='vsIso'){
     const std=ctx.sub==='vsIso'?30+G.isoLimpers*BB:(R.pos===7?30:25);
     const tc=Math.max(0,std-p.bet),ps=pot-G.currentBet+std;
-    out.push(`作为对比，如果加注到标准的 ${fmt(std)}bb，你只需要 ${pc(tc/(ps+tc))} 的胜率。尺度越大，需要的胜率越高，防守范围就要越紧。`);
+    if(Math.abs(G.currentBet-std)>0.1*std)out.push(`作为对比，如果加注到标准的 ${fmt(std)}bb，你只需要 ${pc(tc/(ps+tc))} 的胜率。尺度越大，需要的胜率越高，防守范围就要越紧。`);
   }
   const e=ctx.eqE[k],re=e*ctx.realA[k];
   out.push(ctx.allin?`${nm} 对 ${who(R)} 估计范围的胜率约 ${pc(ctx.eqA[k])}。已经是全下，后面没有下注了，胜率可以全部实现。`
-    :`${nm} 对 ${who(R)} 估计范围的胜率约 ${pc(ctx.eqA[k])}${ctx.behind?`；后面 ${ctx.behind} 人里预计约有 ${ctx.mExp.toFixed(1)} 人会跟进来，按多人底池折算后胜率约 ${pc(e)}`:''}。${ctx.ip?'你翻后有位置':'你翻后没有位置'}，按能实现的比例折算后约 ${pc(re)}。`);
-  if(!ctx.allin&&ctx.spr<3.5)out.push(`跟注后剩下的筹码只有底池的 ${ctx.spr.toFixed(1)} 倍，接近全下，后面很难被打走，所以胜率几乎能全部实现。`);
+    :`${nm} 对 ${who(R)} 估计范围的胜率约 ${pc(ctx.eqA[k])}${ctx.nIn?`；但已经有 ${ctx.nIn} 人跟注，你要同时面对 ${ctx.nIn+1} 个对手${ctx.behind?'':`，胜率只有约 ${pc(e)}`}`:''}${ctx.behind?`；后面 ${ctx.behind} 人里预计约有 ${ctx.mExp.toFixed(1)} 人会跟进来，按多人底池折算后胜率约 ${pc(e)}`:''}。${ctx.ip?'你翻后有位置':'你翻后没有位置'}，按能实现的比例折算后约 ${pc(re)}。`);
+  if(!ctx.allin&&ctx.spr<3.5&&ctx.nIn+ctx.mExp>=1)out.push(`跟注后剩下的筹码是底池的 ${ctx.spr.toFixed(1)} 倍，但这是 ${ctx.nIn+1+(ctx.mExp>=0.5?2:1)} 人左右的多人底池：翻牌后好几个人都可能下注，弱牌很难看到摊牌，胜率实现得很差。多人底池里要的是能做成坚果的牌（同花、口袋对、连张），而不是非同花的散牌。`);
+  else if(!ctx.allin&&ctx.spr<3.5)out.push(`跟注后剩下的筹码只有底池的 ${ctx.spr.toFixed(1)} 倍，接近全下，后面很难被打走，所以胜率几乎能全部实现。`);
   if(ctx.behind)out.push(`你后面还有 ${ctx.behind} 人没行动，他们可能跟进来变成多人底池。多人底池里非同花、不连张的牌很难赢，同花牌和口袋对相对更好。如果有人跟进来，底池也更大，所以把需要的胜率按约 ${pc(ctx.needM)} 计算。`);
   if(ctx.sub==='vsIso')out.push(`对手是在 ${G.isoLimpers} 个溜入者后面隔离加注，用的不是开池范围，所以不能套用"面对开池"的范围表。`);
   const nd=ctx.needM;
@@ -815,7 +833,10 @@ function advisePost(pi,iters,detail){
     const cb=agg&&street===1&&n===1&&eq<sT?cbetPlan(p,B,tex,eq,vT,cl,ip):delayed?turnPlan(p,B,tex,eq,vT,cl,ip,'delayed'):barrel?turnPlan(p,B,tex,eq,vT,cl,ip,'barrel'):null;
     if(cb){kind='cbet';o=cb.o;why.push(...cb.why);}
     else if(eq>=sT){kind='value';o={bet:.85,check:.15};why.push('胜率很高，主要用价值下注，从对手更差的牌里拿钱。');
-      if(!tex.wet&&!river&&n===1&&eq>=0.9){
+      if(agg&&street===1&&n===1&&eq>=0.9){
+        o={bet:.9,check:.1};
+        why.push('你是翻前进攻者，在这个牌面上你的整个范围本来就会高频持续下注。坚果牌跟着范围一起下注：对手的跟注范围里有很多能付钱的牌，过牌反而让他免费看牌，也让你的下注范围变弱。求解器在这类局面里几乎不慢打。');
+      }else if(!tex.wet&&!river&&n===1&&eq>=0.9){
         const bl=blockerNote(p.hole,B);o=bl?{bet:.5,check:.5}:{bet:.65,check:.35};
         why.push(`你的牌几乎是坚果，而牌面干燥，对手很难在后面的牌反超你，给他一张免费牌的风险很小。${bl}所以可以经常过牌慢打：让他诈唬，或者在后面的街中牌后付钱。`);
       }else if(!tex.wet&&!river)why.push('干燥牌面可以偶尔过牌慢打，平衡你的过牌范围。');}
@@ -858,10 +879,10 @@ function advisePost(pi,iters,detail){
     const betFrac=toCall/Math.max(1,pot-toCall);
     // hands that rarely improve realise less when more betting is likely to follow; top pair and overpairs are exempt
     const oneWay=!river&&(cl.b==='medium'||cl.b==='weak'||cl.b==='air')&&!/顶对|超对/.test(cl.d)&&spr>2;
-    const disc=!oneWay?1:facingRaise?0.6:betFrac>=0.9?0.78:betFrac>=0.5?0.88:0.95;
+    const disc=!oneWay?1:facingRaise?(cl.b==='air'?0.6:0.75):betFrac>=0.9?0.78:betFrac>=0.5?0.88:0.95;
     const Rf=(ip?1:0.92)*(n>=2?0.95:1)*disc;
-    const drawy=!river&&(cl.b==='draw'||cl.b==='strongdraw');
-    const effEq=eq*Rf+(drawy&&spr>3?0.05:0);
+    const drawy=!river&&(cl.b==='draw'||cl.b==='strongdraw'||cl.b==='weakdraw');
+    const effEq=eq*Rf+(drawy&&spr>3?(cl.b==='weakdraw'?0.035:0.05):0);
     const eqT=Math.abs(effEq-eq)>0.02?`胜率 ${pc(eq)}（按能兑现的程度折算后约 ${pc(effEq)}）`:`胜率 ${pc(eq)}`;
     const overbet=betFrac>=0.9;
     const rT=(n===1?(river?0.8:0.72):n===2?0.58:0.48)+(overbet?0.1:0);
@@ -1004,17 +1025,19 @@ function turnPlan(p,B,tex,eq,vT,cl,ip,mode){
   const sc=[0,0,0,0];for(const c of B)sc[c&3]++;const fsc=[0,0,0,0];for(const c of flop)fsc[c&3]++;
   const flushNew=Math.max(...sc)>=3&&Math.max(...fsc)<3;
   const paired=flop.some(c=>(c>>2)===tr),connects=!paired&&tr<=8&&flop.some(c=>Math.abs((c>>2)-tr)<=2);
-  let base=mode==='delayed'?(ip?0.65:0.55):(ip?0.55:0.45);
+  const pot3=G.raiseLevel>=2;
+  let base=mode==='delayed'?(ip?0.55:0.45):(ip?0.55:0.45)+(pot3?0.15:0);
   const why=[];
   if(mode==='delayed')why.push(`翻牌双方都过牌，转牌他又过牌。他连续两次没有下注，范围里大部分是没中的牌；而你是翻前加注者，${ip?'又有位置，':''}重新拿回主动权。这种"延迟持续下注"在 GTO 里频率很高。`);
   else why.push('你翻牌下注被跟注，他的范围已经去掉了大部分空气，剩下的多是中等牌和听牌。转牌要不要继续下注（第二枪），要看这张牌对谁有利，以及你的牌有没有改进机会。');
   if(tr>=10&&tr>fHi){base+=0.1;why.push(`转牌 ${rankCN(tr)} 是一张大牌：翻前加注方的范围里带 ${rankCN(tr)} 的强牌更多，这张牌对你的范围更有利。`);}
-  else if(flushNew||connects){base-=0.15;why.push(`转牌 ${cardTxt(turn)} ${flushNew?'带来了同花听牌':'和牌面连了起来，带来更多顺子和两对'}，对跟注方的范围更有利，下注频率要降低。`);}
+  else if(flushNew||connects){base-=(pot3&&!flushNew?0.07:0.15);why.push(`转牌 ${cardTxt(turn)} ${flushNew?'带来了同花听牌':'和牌面连了起来，带来更多顺子和两对'}，对跟注方的范围更有利，下注频率要降低。`);}
   const r1=p.hole[0]>>2,r2=p.hole[1]>>2,hiB=Math.max(...B.map(c=>c>>2)),over=Math.min(r1,r2)>hiB,aceOver=Math.max(r1,r2)===12&&12>hiB;
   const b=cl.b;let f;
   if(b==='strongdraw'||b==='draw'){f=Math.min(0.85,base+0.15);why.push('你有听牌：下注能让他弃牌，被跟注后河牌还有补牌。');}
   else if(eq>=vT||b==='good'||b==='medium'){f=base*(mode==='delayed'?0.85:0.65);why.push(mode==='delayed'?'你的牌有一定价值：下注能从他更差的牌里拿薄价值，也能保护手牌。':'你的牌有一定摊牌价值，不一定要继续下注：一部分下注拿价值，一部分过牌控制底池。');}
   else if(b==='weak'){f=base*0.5;why.push('弱对子有一点摊牌价值，下注频率低一些。');}
+  else if(mode==='delayed'&&aceOver&&b!=='weakdraw'){f=base*0.35;why.push('这手牌有一张 A：没中也常常是最好的牌（他连续过牌的范围里有很多更差的高牌）。A 高有摊牌价值，更适合过牌摊牌，诈唬应该用完全没有摊牌价值的牌。');}
   else if(b==='weakdraw'||over||aceOver){f=base*(mode==='delayed'?1:0.75);why.push(`这手牌${b==='weakdraw'?'有卡顺听牌':over?'两张都是高张':'有一张 A'}，被跟注后河牌还有改进机会，适合作为诈唬下注。`);}
   else{f=base*(mode==='delayed'?0.6:0.35);why.push(mode==='delayed'?'完全没有改进机会的空气，下注频率低一些。':'没有听牌、也没有高张，被跟注后几乎没有改进机会，以过牌为主。');}
   f=Math.max(0,Math.min(0.9,f));
@@ -1778,8 +1801,23 @@ function renderOpp(){
 
 /* ================= version & changelog ================= */
 // Newest first. Each update: bump APP_VERSION and add an entry at the top.
-const APP_VERSION='1.5.6';
+const APP_VERSION='1.5.9';
 const CHANGELOG=[
+  {v:'1.5.9',date:'2026-11-05',items:[
+    ['修复','翻前近似局面（例如溜入后面对隔离加注）只计算了对加注者一个人的胜率，漏掉了已经跟注的人。例如第 9 手：J4o 前面已经有 4 人跟注，以前按单挑算出 27% 胜率建议跟注，实际要同时面对 5 个对手，胜率只有约 6%，现在建议弃牌。'],
+    ['修复','"跟注后筹码只剩底池 3 倍、胜率几乎能全部实现"这条只适用于单挑。多人底池里弱牌很难看到摊牌，现在不再这样折算，理由里也会说明。']
+  ]},
+  {v:'1.5.8',date:'2026-10-28',items:[
+    ['改进','用开源求解器（postflop-solver）当裁判，逐个核对了之前讨论过的单挑翻后牌例，并按求解器结果修正建议和回归题库。'],
+    ['修复','翻前进攻者在翻牌拿到坚果（例如 3bet 底池 A64 拿 AA）：以前建议一半过牌慢打，求解器几乎总是跟着范围小注下注。现在建议下注约 90%。'],
+    ['修复','卡顺听牌面对过牌加注弃得太多（例如 A93 上的 54s）：求解器 100% 跟注。现在卡顺也计入隐含赔率。'],
+    ['修复','小对子面对过牌加注弃得太多：求解器拿 55 大约一半跟注。没中的高张仍以弃牌为主。'],
+    ['修复','延迟持续下注时，A 高没听牌的牌以前经常诈唬：A 高有摊牌价值，求解器基本过牌。现在以过牌为主。'],
+    ['修复','3bet 底池里转牌第二枪的频率偏低：翻前加注方范围优势更大，现在下注更多。']
+  ]},
+  {v:'1.5.7',date:'2026-10-28',items:[
+    ['修复','近似局面的理由里，"作为对比，如果加注到标准尺度……"这句话在对手用的本来就是标准尺度时也会出现。']
+  ]},
   {v:'1.5.6',date:'2026-10-27',items:[
     ['修复','对手"持续下注"的范围被估计得太强（当成普通下注处理）：现在翻前加注者的持续下注、转牌第二枪、普通下注、加注分别估计。例如 BB 拿 55 面对 33% 的小注持续下注，现在建议跟注。'],
     ['修复','上一版的"胜率兑现"折扣打得太狠：现在随下注大小变化，面对小注几乎不打折，面对大注和加注才打得多；顶对和超对不打折。'],
