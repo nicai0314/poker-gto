@@ -861,12 +861,12 @@ function advisePost(pi,iters,detail){
     // bluffs and semi-bluffs need everyone to fold: rarer with more opponents, and never as a big all-in into a crowd
     if((kind==='bluff'||kind==='semi')&&n>=2){const keep=kind==='semi'?(n===2?0.6:0.3):(n===2?0.35:0);o={bet:(o.bet||0)*keep};o.check=1-o.bet;
       why.push(`这是 ${n+1} 人底池，${kind==='semi'?'半诈唬':'诈唬'}要让所有人都弃牌才成功，所以比单挑时少下注${keep===0?'，这里直接过牌':''}。`);}
-    const vDist=kind==='value'&&n===1?rangeDist(opps[0],p.hole.concat(B)):null;
+    const vDist=kind==='value'&&n===1?rangeDist(opps[0],p.hole.concat(B),p.hole):null;
     size=chooseSize(kind,{pot,eff,street,river,n,tex,eq,spr,max,pot3:G.raiseLevel>=2,dist:vDist});
     if(size.vp&&eq<0.9){
-      const ev=size.vp.bestEv,d=vDist,better=d.strong||0;
-      if(ev<0.04){o={bet:.15,check:.85};why.length=0;why.push(`你的牌不弱，但他会跟注的牌里，比你好的（强牌约 ${pc(better)}）和比你差的差不多多，下注几乎赚不到钱。以过牌为主，用摊牌价值赢下他更差的牌。`);}
-      else if(ev<0.1){o={bet:.5,check:.5};why.length=0;why.push(`你的牌是中等偏强：能赢他的弱牌，但输给他约 ${pc(better)} 的强牌。下注只能赚一点点，所以过牌和小注薄价值混合；被加注时通常要弃牌。`);}
+      const ev=size.vp.bestEv,d=vDist,better=d.ahead||0;
+      if(ev<0.04){o={bet:.15,check:.85};why.length=0;why.push(`你的牌不弱，但他会跟注的牌里，比你好的（约 ${pc(better)}）和比你差的差不多多，下注几乎赚不到钱。以过牌为主，用摊牌价值赢下他更差的牌。`);}
+      else if(ev<0.1){o={bet:.5,check:.5};why.length=0;why.push(`你的牌是中等偏强：能赢他的弱牌，但输给他约 ${pc(better)} 比你好的牌。下注只能赚一点点，所以过牌和小注薄价值混合；被加注时通常要弃牌。`);}
     }
     if((kind==='bluff'||kind==='semi')&&size.allin&&n>=2){o={bet:(o.bet||0)*0.3};o.check=1-o.bet;}
     const to=size.to;
@@ -927,10 +927,15 @@ function advisePost(pi,iters,detail){
   }
   return res;
 }
-function rangeDist(q,dead){
+function rangeDist(q,dead,hero){
   const ds=new Set(dead),acc={strong:0,good:0,medium:0,draw:0,weak:0,air:0};let tot=0;
   if(!q||!q.combos)return null;
-  for(const c of q.combos){if(c[2]<=0||ds.has(c[0])||ds.has(c[1]))continue;const b=bucketGroup(classify(c[0],c[1],G.board).b);acc[b]+=c[2];tot+=c[2];}
+  // with the hero's hand given, every combo is compared with it directly (a hand label like "trips" or "two pair"
+  // says nothing about who is ahead on a paired board): combos ahead of the hero go to 'ahead', ties to 'tie'
+  const hv=hero?evalHand(hero.concat(G.board)):0;if(hero){acc.ahead=0;acc.tie=0;}
+  for(const c of q.combos){if(c[2]<=0||ds.has(c[0])||ds.has(c[1]))continue;
+    let b;if(hero){const v=evalHand([c[0],c[1]].concat(G.board));b=v>hv?'ahead':v===hv?'tie':null;}
+    if(!b)b=bucketGroup(classify(c[0],c[1],G.board).b);acc[b]+=c[2];tot+=c[2];}
   if(tot<=0)return null;for(const k in acc)acc[k]/=tot;return acc;
 }
 function computeAdvice(pi,iters,detail){return G.street===0?advisePre(pi):advisePost(pi,iters,detail);}
@@ -967,7 +972,7 @@ const VS_SIZES=[0.25,0.33,0.5,0.66,0.75,1,1.25];
 function callChance(b,s,street,t){
   let c;
   switch(b){
-    case 'strong':c=1-0.15*s;break;
+    case 'strong':case 'ahead':case 'tie':c=1-0.15*s;break;
     case 'good':c=1-0.3*s;break;
     case 'medium':c=0.95-0.9*s;break;
     case 'weak':c=0.6-0.8*s;break;
@@ -975,12 +980,12 @@ function callChance(b,s,street,t){
     default:c=0.15-0.15*s;
   }
   c=Math.min(1,Math.max(0,c));
-  return b==='strong'||b==='good'?c:Math.pow(c,t); // medium and weaker hands get more reluctant each street
+  return b==='strong'||b==='good'||b==='ahead'||b==='tie'?c:Math.pow(c,t); // medium and weaker hands get more reluctant each street
 }
 // Value collected over the remaining streets when betting s now; on every later street the best size
 // (including all-in) is chosen again for whatever part of his range is still calling.
 function valueEV(dist,s,c){
-  const L=4-c.street,val=b=>b==='strong'?(c.eq>=0.9?1:-1):1; // unless near-nuts, his strongest hands are ahead of you
+  const L=4-c.street,val=b=>b==='ahead'?-1:b==='tie'?0:1; // compared with the hero's actual hand
   const memo=new Map();
   function rest(alive,pot,left,t){
     if(t>L||left<=0)return 0;
@@ -1004,7 +1009,8 @@ function valueSizePlan(c){
   let best=evs.reduce((a,b)=>b.ev>a.ev?b:a);
   const R=[],L=4-c.street;
   const cont=(d.strong||0)+(d.good||0),mid=(d.medium||0)+(d.weak||0);
-  R.push(`对手估计范围：强牌（两对+）${pc(d.strong||0)}、好牌 ${pc(d.good||0)}、中等成牌 ${pc(d.medium||0)}、弱对 ${pc(d.weak||0)}、听牌 ${pc(d.draw||0)}、空气 ${pc(d.air||0)}。`);
+  if(d.ahead!=null)R.push(`和你的牌直接比大小：他的估计范围里比你好的约 ${pc(d.ahead)}${d.tie>=0.01?`，和你平分的约 ${pc(d.tie)}`:''}，其余都比你差。`);
+  R.push(`${d.ahead!=null?'比你差的部分：':'对手估计范围：'}强牌（两对+）${pc(d.strong||0)}、好牌 ${pc(d.good||0)}、中等成牌 ${pc(d.medium||0)}、弱对 ${pc(d.weak||0)}、听牌 ${pc(d.draw||0)}、空气 ${pc(d.air||0)}。`);
   if(mid>cont+0.2)R.push(`他的范围以中等成牌和弱对子为主，这些牌${L>1?'愿意跟一两次小注，但面对大注或者连续几条街的下注就会弃牌':'面对大注会弃牌'}。所以用 ${Math.round(best.s*100)}% 左右的${best.s<=0.5?'小':'中等'}尺度，${L>1?'让它们在几条街都继续付钱':'让更多这样的牌跟注'}，总共赢得最多。`);
   else if(cont>=0.35)R.push(`他的范围里有不少好牌和强牌，这些牌面对大注也会跟，所以可以用 ${Math.round(best.s*100)}% 这样较大的尺度${L>1?'，几条街下来把更多筹码打进去':''}。`);
   else R.push(`综合他范围里各类牌愿意跟注的程度，${Math.round(best.s*100)}% 左右能赢得最多。`);
@@ -1051,7 +1057,8 @@ function chooseSize(kind,c){
   const geo=c.pot>0?(Math.pow(2*c.eff/c.pot+1,1/left)-1)/2:1;
   if(kind==='value'&&c.n===1&&c.dist){
     const vp=valueSizePlan(c);f=vp.f;R.push(...vp.R);c.vp=vp;
-    if(c.eq<0.9&&(c.dist.strong||0)>=0.1)R.push(`注意他有约 ${pc(c.dist.strong)} 的牌比你好，这些牌会跟注甚至加注；下得越大，被更好的牌跟注的损失越大，所以尺度要克制。`);
+    const bt=c.dist.ahead!=null?c.dist.ahead:(c.eq<0.9?c.dist.strong||0:0);
+    if(bt>=0.1)R.push(`注意他有约 ${pc(bt)} 的牌比你好，这些牌会跟注甚至加注；下得越大，被更好的牌跟注的损失越大，所以尺度要克制。`);
   }else if(c.river){
     if(kind==='value'){
       f=0.75;R.push('河牌之后没有牌要发，你的下注范围是两极化的：要么是强牌，要么是诈唬。用大尺度，强牌能从对手的抓诈牌里拿到最多。');
@@ -1096,9 +1103,12 @@ function sizeVerdict(kind,x,f,c){
   const small=x<f;
   if(Math.abs(x-f)<=0.12&&!(kind==='cbet'))return small?'略小，也可以':'略大，也可以';
   if(kind==='value'&&c.vp){
-    const ev=valueEV(c.dist,x,c),r=ev/Math.max(1e-9,c.vp.bestEv);
+    const ev=valueEV(c.dist,x,c),best=c.vp.bestEv;
+    if(best<=0.005)return small?'偏小':'偏大：主要只会被更好的牌跟注';
+    if(ev<=0)return small?'偏小：少赢价值':'偏大：主要只会被更好的牌跟注，下注反而亏';
+    const r=ev/best;
     if(r>=0.93)return small?'略小，也可以':'略大，也可以';
-    return small?'偏小：少赢价值':`偏大：能跟的牌变少，少赢 ${Math.round((1-r)*100)}% 价值`;
+    return small?`偏小：少赢 ${Math.round((1-r)*100)}% 价值`:`偏大：能跟的牌变少，少赢 ${Math.round((1-r)*100)}% 价值`;
   }
   switch(kind){
     case 'value':
@@ -1558,7 +1568,7 @@ function sizeHTML(a){
   let h='';
   const bo=a.opts.find(o=>o.t==='bet'),ro=a.opts.find(o=>o.t==='raise');
   if(a.size&&bo&&bo.f>=0.05){
-    const z=a.size,lab=z.allin?'全下':`${Math.round(bo.to/potTotal()*100)}% 底池`;
+    const z=a.size,lab=z.allin?'全下':((bo.label.match(/（(\d+% 底池)）/)||[])[1]||`${Math.round(z.f*100)}% 底池`);
     const ttl=bo.f>=0.5?`为什么下注 ${lab}？`:`如果下注，为什么用 ${lab}？`;
     h+=`<div class="sizebox"><div class="sbt">${ttl}</div><ul class="why">${z.R.map(r=>`<li>${r}</li>`).join('')}</ul>
     <div class="szwrap"><table class="sz"><thead><tr><th>尺度</th><th>对手跟注需要的胜率</th><th>诈唬需要的弃牌率</th><th>在这里</th></tr></thead><tbody>${
@@ -1801,8 +1811,14 @@ function renderOpp(){
 
 /* ================= version & changelog ================= */
 // Newest first. Each update: bump APP_VERSION and add an entry at the top.
-const APP_VERSION='1.5.9';
+const APP_VERSION='1.6.0';
 const CHANGELOG=[
+  {v:'1.6.0',date:'2026-11-12',items:[
+    ['修复','价值下注的计算以前按"牌型标签"判断谁更好：对手的"强牌（两对+）"一律当成比你好。对子面上这会出大错，例如第 247 手：牌面 A5 7 A 8，你拿 AQ（三条 A），对手的 A2–AJ 也是"三条 A"，以前全被算成比你好，于是建议过牌。现在对手范围里的每手牌都直接和你的牌比大小，只有真正比你好的（这手里只有 AK、葫芦和顺子）才算。'],
+    ['修复','以前胜率在 90% 上下时，建议会在"下注"和"过牌"之间突然跳变（胜率 90% 以上才把强牌算成比你差）。现在直接比大小，不再有这个断点。'],
+    ['修复','尺度对比表里"少赢 365% / 829% 价值"这类超过 100% 的数字：最佳尺度的收益接近 0 时比值会失真。现在最多显示 99%，下注亏钱时直接说明。'],
+    ['修复','手牌结束后复盘时，尺度框标题用的是结束时的底池，所以出现"为什么用 17% 底池"、而表格推荐 25% 的矛盾。现在标题用决策时的底池。']
+  ]},
   {v:'1.5.9',date:'2026-11-05',items:[
     ['修复','翻前近似局面（例如溜入后面对隔离加注）只计算了对加注者一个人的胜率，漏掉了已经跟注的人。例如第 9 手：J4o 前面已经有 4 人跟注，以前按单挑算出 27% 胜率建议跟注，实际要同时面对 5 个对手，胜率只有约 6%，现在建议弃牌。'],
     ['修复','"跟注后筹码只剩底池 3 倍、胜率几乎能全部实现"这条只适用于单挑。多人底池里弱牌很难看到摊牌，现在不再这样折算，理由里也会说明。']
