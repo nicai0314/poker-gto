@@ -882,7 +882,10 @@ function advisePost(pi,iters,detail){
     const disc=!oneWay?1:facingRaise?(cl.b==='air'?0.6:0.75):betFrac>=0.9?0.78:betFrac>=0.5?0.88:0.95;
     const Rf=(ip?1:0.92)*(n>=2?0.95:1)*disc;
     const drawy=!river&&(cl.b==='draw'||cl.b==='strongdraw'||cl.b==='weakdraw');
-    const effEq=eq*Rf+(drawy&&spr>3?(cl.b==='weakdraw'?0.035:0.05):0);
+    // implied odds: real draws keep them; a gutshot only heads-up (multiway it often makes the low end of a straight
+    // or a dominated pair, and is more likely to lose a big pot to a better straight or flush)
+    const implied=drawy&&spr>3&&(cl.b!=='weakdraw'||n===1);
+    const effEq=eq*Rf+(implied?(cl.b==='weakdraw'?0.035:0.05):0);
     const eqT=Math.abs(effEq-eq)>0.02?`胜率 ${pc(eq)}（按能兑现的程度折算后约 ${pc(effEq)}）`:`胜率 ${pc(eq)}`;
     const overbet=betFrac>=0.9;
     const rT=(n===1?(river?0.8:0.72):n===2?0.58:0.48)+(overbet?0.1:0);
@@ -900,7 +903,8 @@ function advisePost(pi,iters,detail){
       else if(effEq>=lo-0.06){o={call:.1,fold:.9};why.push(`${eqT}低于跟注所需的 ${pc(potOdds)}，以弃牌为主；差得不多，偶尔跟注也说得过去。`);}
       else{o={fold:1};why.push(`${eqT}低于跟注所需的 ${pc(potOdds)}，长期跟注会亏。`);}
     }
-    if(drawy)why.push('听牌有隐含赔率：中牌后还能赢到后面的下注，所以跟注门槛略低。');
+    if(implied)why.push('听牌有隐含赔率：中牌后还能赢到后面的下注，所以跟注门槛略低。');
+    else if(drawy&&cl.b==='weakdraw'&&n>=2)why.push(`这是 ${n+1} 人底池，你的卡顺不算隐含赔率：中了常常只是小的那一端顺子或者一对，可能输给更大的顺子或同花，河牌${ip?'':'你还要先行动，'}也很难再从几个人那里多赢钱。`);
     if(!ip&&n===1)why.push('你没有位置，后面街更难实现胜率，所以门槛稍微提高。');
     if(oneWay&&disc<0.9)why.push(`你的牌是${cl.d}，${cl.b==='air'?'没有对子也没有听牌，':''}后面很少能改进，而跟注后还剩 SPR ${spr.toFixed(1)}：他${facingRaise?'加注之后，':''}转牌、河牌很可能继续下注，你很难跟到摊牌。名义上的胜率实际兑现不了多少，所以按打折后的胜率来判断。`);
     why.push(`MDF ${pc(mdf)} 是对你整个范围的要求：整体要继续这么多，对手才不能用任何牌诈唬获利。它不是每手牌的跟注标准，范围里最弱的那部分牌本来就该弃。`);
@@ -922,7 +926,7 @@ function advisePost(pi,iters,detail){
     res.made=handName(evalHand(p.hole.concat(B)));
     const bettor=G.aggr[street]>=0&&G.aggr[street]!==pi?P[G.aggr[street]]:null;
     const main=bettor&&!bettor.folded?bettor:(opps.find(q=>q.i===G.aggr[street-1])||opps[0]);
-    res.mainOpp=main;res.dist=rangeDist(main,p.hole.concat(B));res.hint=styleHint(main);
+    res.mainOpp=main;res.oppNames=opps.map(q=>who(q));res.dist=rangeDist(main,p.hole.concat(B));res.hint=styleHint(main);
     res.sit=`${STREET_CN[street]} · ${n+1} 人底池 · ${toCall>0?`${who(bettor||main)} ${G.nb>1?'加注到':'下注'} ${fmt(G.currentBet)}bb，你需要跟 ${fmt(toCall)}bb`:'目前无人下注'} · ${ip?'你有位置':'你没有位置'}`;
   }
   return res;
@@ -1548,7 +1552,7 @@ function adviceBody(a){
     h+=hintHTML(a.hint);
     h+=matrixHTML(a);
   }else{
-    h+=`<div class="grid4"><div class="kv"><span>胜率（对估计范围）</span><b>${pc(a.eq)}</b></div><div class="kv"><span>跟注所需胜率</span><b>${a.potOdds!=null?pc(a.potOdds):'—'}</b></div><div class="kv"><span>MDF</span><b>${a.mdf!=null?pc(a.mdf):'—'}</b></div><div class="kv"><span>SPR</span><b>${a.spr.toFixed(1)}</b></div></div>`;
+    h+=`<div class="grid4"><div class="kv"><span>胜率（${a.oppNames&&a.oppNames.length>1?`同时对 ${a.oppNames.length} 人`:'对估计范围'}）</span><b>${pc(a.eq)}</b></div><div class="kv"><span>跟注所需胜率</span><b>${a.potOdds!=null?pc(a.potOdds):'—'}</b></div><div class="kv"><span>MDF</span><b>${a.mdf!=null?pc(a.mdf):'—'}</b></div><div class="kv"><span>SPR</span><b>${a.spr.toFixed(1)}</b></div></div>`;
     h+=`<div class="line"><span class="lbl">牌力</span> ${a.made} · ${a.cl.d}${a.cl.draw?` · <span class="lbl">听牌</span> ${a.cl.draw}`:''}</div><div class="line"><span class="lbl">牌面</span> ${a.tex.label}</div>`;
     if(a.dist){
       const order=BUCKET_UI;
@@ -1619,7 +1623,7 @@ function adviceText(a){
   L.push('程序建议：'+a.opts.map(o=>`${o.label} ${pc(o.f)}`).join(' / '));
   if(a.street===0)L.push(`我的手牌类别：${clsName(a.k)}；程序在这个局面的加注范围约 ${a.rp}%${a.cp>0?`，跟注范围约 ${a.cp}%`:''}`);
   else{
-    L.push(`我对对手估计范围的胜率：${pc(a.eq)}${a.potOdds!=null?`；跟注所需胜率：${pc(a.potOdds)}；MDF：${pc(a.mdf)}`:''}；SPR：${a.spr.toFixed(1)}`);
+    L.push(`我${a.oppNames&&a.oppNames.length>1?`同时对 ${a.oppNames.length} 个对手（${a.oppNames.join('、')}）`:'对对手'}估计范围的胜率：${pc(a.eq)}${a.potOdds!=null?`；跟注所需胜率：${pc(a.potOdds)}；MDF：${pc(a.mdf)}`:''}；SPR：${a.spr.toFixed(1)}`);
     if(a.made)L.push(`我的牌力：${a.made}（${a.cl.d}${a.cl.draw?'，'+a.cl.draw:''}）；牌面：${a.tex.label}`);
     if(a.dist&&a.mainOpp)L.push(`${who(a.mainOpp)} 的估计范围：`+BUCKET_UI.map(([k,l])=>`${l} ${pc(a.dist[k])}`).join('，'));
   }
@@ -1811,8 +1815,12 @@ function renderOpp(){
 
 /* ================= version & changelog ================= */
 // Newest first. Each update: bump APP_VERSION and add an entry at the top.
-const APP_VERSION='1.6.0';
+const APP_VERSION='1.6.1';
 const CHANGELOG=[
+  {v:'1.6.1',date:'2026-11-17',items:[
+    ['修复','多人底池里卡顺（只有 4 张补牌的听牌）不再加隐含赔率。例如第 3 手：A5 在 4 T 2 7 上卡 3 的顺子，三人底池、河牌还要先行动，中了常常只是小的那一端顺子或一对 A。以前加了隐含赔率后建议跟注 100%，现在是跟注和弃牌混合，以弃牌为主。单挑时卡顺仍然计入隐含赔率。'],
+    ['改进','多人底池的胜率一直是同时对所有对手计算的，但以前只写"对对手估计范围的胜率"，看起来像只算了一个人。现在会写明"同时对 2 个对手（谁、谁）"。']
+  ]},
   {v:'1.6.0',date:'2026-11-12',items:[
     ['修复','价值下注的计算以前按"牌型标签"判断谁更好：对手的"强牌（两对+）"一律当成比你好。对子面上这会出大错，例如第 247 手：牌面 A5 7 A 8，你拿 AQ（三条 A），对手的 A2–AJ 也是"三条 A"，以前全被算成比你好，于是建议过牌。现在对手范围里的每手牌都直接和你的牌比大小，只有真正比你好的（这手里只有 AK、葫芦和顺子）才算。'],
     ['修复','以前胜率在 90% 上下时，建议会在"下注"和"过牌"之间突然跳变（胜率 90% 以上才把强牌算成比你差）。现在直接比大小，不再有这个断点。'],
