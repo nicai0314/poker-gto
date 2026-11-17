@@ -22,7 +22,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@700;900&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+SC:wght@700;900&display=swap">
 <style>
 /* Layout: header strip; table + action bar on the left (primary), advice + log column on the right; stacks to one column on phones.
    Colour code follows solver convention: fold = blue, check/call = green, bet/raise = red. */
@@ -38,6 +38,7 @@
 }
 html,body{background:var(--bg);color:var(--fg)}
 body{font-family:var(--ff-body);font-size:14px;line-height:1.55}
+html[lang=zh-HK] body{font-family:"Noto Sans TC",var(--ff-body)}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 button,select,input{font:inherit;color:inherit}
@@ -278,44 +279,47 @@ table.rev td{padding:5px 6px;border-bottom:1px solid var(--line);vertical-align:
 <div class="wrap">
   <header class="top">
     <div class="brand">
-      <h1>德扑 <em>GTO</em> 训练台 <button type="button" class="ver" id="verBtn" title="查看更新记录"></button></h1>
-      <p>九人桌 · 每手 100bb · 你对 8 个 AI，每一步给出 GTO 建议</p>
+      <h1><span data-en="Poker <em>GTO</em> Trainer">德扑 <em>GTO</em> 训练台</span> <button type="button" class="ver" id="verBtn" title="查看更新记录" data-en-title="Changelog"></button></h1>
+      <p data-en="9-max · 100bb every hand · you vs 8 AI players, with a GTO recommendation at every step">九人桌 · 每手 100bb · 你对 8 个 AI，每一步给出 GTO 建议</p>
     </div>
     <div class="stats" id="stats"></div>
     <button class="acct" id="acctBtn" type="button" hidden></button>
     <div class="settings">
-      <label for="setPos">我的位置
+      <label for="setPos"><span data-en="My seat">我的位置</span>
         <select id="setPos">
-          <option value="rot">每手轮转</option>
-          <option value="0">固定 UTG</option><option value="1">固定 UTG+1</option><option value="2">固定 UTG+2</option>
-          <option value="3">固定 LJ</option><option value="4">固定 HJ</option><option value="5">固定 CO</option>
-          <option value="6">固定 BTN</option><option value="7">固定 SB</option><option value="8">固定 BB</option>
+          <option value="rot" data-en="Rotate each hand">每手轮转</option>
+          <option value="0" data-en="Always UTG">固定 UTG</option><option value="1" data-en="Always UTG+1">固定 UTG+1</option><option value="2" data-en="Always UTG+2">固定 UTG+2</option>
+          <option value="3" data-en="Always LJ">固定 LJ</option><option value="4" data-en="Always HJ">固定 HJ</option><option value="5" data-en="Always CO">固定 CO</option>
+          <option value="6" data-en="Always BTN">固定 BTN</option><option value="7" data-en="Always SB">固定 SB</option><option value="8" data-en="Always BB">固定 BB</option>
         </select>
       </label>
-      <label for="setMode">建议显示
-        <select id="setMode"><option value="live">实时显示</option><option value="quiz">先决定，后显示</option></select>
+      <label for="setMode"><span data-en="Advice">建议显示</span>
+        <select id="setMode"><option value="live" data-en="Show live">实时显示</option><option value="quiz" data-en="Decide first, then show">先决定，后显示</option></select>
       </label>
-      <label for="setSpeed">AI 速度
-        <select id="setSpeed"><option value="slow">慢</option><option value="normal">中</option><option value="fast">快</option></select>
+      <label for="setSpeed"><span data-en="AI speed">AI 速度</span>
+        <select id="setSpeed"><option value="slow" data-en="Slow">慢</option><option value="normal" data-en="Medium">中</option><option value="fast" data-en="Fast">快</option></select>
       </label>
-      <label for="oppBtn">对手类型
+      <label for="oppBtn"><span data-en="Opponents">对手类型</span>
         <button type="button" id="oppBtn" class="optbtn"></button>
+      </label>
+      <label for="setLang"><span>语言 · Language</span>
+        <select id="setLang"><option value="zh">简体中文</option><option value="hk">繁體中文</option><option value="en">English</option></select>
       </label>
     </div>
   </header>
 
   <main class="main">
-    <div class="tablebox" id="table" aria-label="牌桌"></div>
+    <div class="tablebox" id="table" aria-label="牌桌" data-en-aria="Poker table"></div>
     <div class="actionbar" id="actionbar"></div>
     <section class="panel" id="advice"></section>
-    <section class="panel logp"><h2>牌局记录</h2><ol id="log"></ol></section>
+    <section class="panel logp"><h2 data-en="Hand log">牌局记录</h2><ol id="log"></ol></section>
   </main>
   <div class="modal" id="copyModal" hidden><div class="sheet wide" id="copySheet" role="dialog" aria-modal="true"></div></div>
   <div class="toast" id="toast" role="status" hidden></div>
   <div class="modal" id="verModal" hidden><div class="sheet wide" id="verSheet" role="dialog" aria-modal="true" aria-labelledby="verTitle"></div></div>
   <div class="modal" id="oppModal" hidden><div class="sheet wide" id="oppSheet" role="dialog" aria-modal="true" aria-labelledby="oppTitle"></div></div>
   <div class="modal" id="acctModal" hidden><div class="sheet" id="acctSheet" role="dialog" aria-modal="true" aria-labelledby="acctTitle"></div></div>
-  <p class="note">翻前建议基于九人桌 100bb 求解器范围的近似（小盲简化为加注或弃牌）。翻后建议用你对“对手估计范围”的胜率、底池赔率、MDF 和牌面结构推算，属于求解器思路的近似，不是逐点求解的结果。AI 对手按同一套策略带随机混合行动。</p>
+  <p class="note" data-en="Preflop advice approximates 9-max 100bb solver ranges (the small blind is simplified to raise-or-fold). Postflop advice is worked out from your equity against the opponents' estimated ranges, pot odds, MDF and board texture: an approximation of solver logic, not a solved result for each spot. The AI opponents play the same strategy with random mixing.">翻前建议基于九人桌 100bb 求解器范围的近似（小盲简化为加注或弃牌）。翻后建议用你对“对手估计范围”的胜率、底池赔率、MDF 和牌面结构推算，属于求解器思路的近似，不是逐点求解的结果。AI 对手按同一套策略带随机混合行动。</p>
 </div>
 
 <script>
@@ -328,8 +332,18 @@ const POS_NAMES=['UTG','UTG+1','UTG+2','LJ','HJ','CO','BTN','SB','BB'];
 const POS_CN=['枪口','枪口+1','中位','低位','劫位','关煞','庄位','小盲','大盲'];
 const OFF2POS=[6,7,8,0,1,2,3,4,5]; // seats after the button -> position index
 const NAMES=['你','阿杰','老王','小林','明哥','小雨','阿强','阿伦','小周'];
+const NAMES_EN=['You','Kit','Wang','Lam','Ming','Yu','Keung','Lun','Chow'];
 const SPEED={slow:1000,normal:600,fast:250};
-const STREET_CN=['翻前','翻牌','转牌','河牌'];
+const STREET_CN=['翻前','翻牌','转牌','河牌'],STREET_EN=['Preflop','Flop','Turn','River'];
+/* ================= language =================
+   tx(zh,en) picks the text for the current language. 繁體 (hk) shows the simplified text converted to Traditional
+   Chinese (Hong Kong usage) by HK(): a phrase table plus a character table generated with OpenCC (s2hk). The page
+   converts every text node it shows, so code only ever writes simplified Chinese and English. */
+let LANG=(()=>{try{const v=localStorage.getItem('gto9-lang');if(v==='zh'||v==='hk'||v==='en')return v;if(localStorage.getItem('gto9-settings'))return 'zh';}catch(e){}
+  const n=(typeof navigator!=='undefined'&&navigator.language||'').toLowerCase();return /^zh-(hk|tw|mo)|hant/.test(n)?'hk':/^zh/.test(n)?'zh':'en';})();
+function tx(zh,en){return LANG==='en'?en:zh;}
+function streetName(i){return tx(STREET_CN[i],STREET_EN[i]);}
+function nmOf(p){return tx(NAMES[p.i],NAMES_EN[p.i]);}
 
 /* ================= evaluator ================= */
 const STR=new Int8Array(8192);
@@ -354,6 +368,9 @@ function evalHand(cs){
 }
 function rankCN(r){return r===8?'10':RANK_CH[r];}
 function handName(v){const c=v>>20,a=(v>>16)&15,b=(v>>12)&15;
+  if(LANG==='en')switch(c){case 8:return a===12?'Royal flush':`Straight flush (${rankCN(a)}-high)`;case 7:return `Quads ${rankCN(a)}`;case 6:return `Full house (${rankCN(a)}s full of ${rankCN(b)}s)`;
+  case 5:return `Flush (${rankCN(a)}-high)`;case 4:return `Straight (${rankCN(a)}-high)`;case 3:return `Trips ${rankCN(a)}`;case 2:return `Two pair ${rankCN(a)}s and ${rankCN(b)}s`;
+  case 1:return `Pair of ${rankCN(a)}s`;default:return `${rankCN(a)}-high`;}
   switch(c){case 8:return a===12?'皇家同花顺':`同花顺（${rankCN(a)} 高）`;case 7:return `四条 ${rankCN(a)}`;case 6:return `葫芦（${rankCN(a)} 带 ${rankCN(b)}）`;
   case 5:return `同花（${rankCN(a)} 高）`;case 4:return `顺子（${rankCN(a)} 高）`;case 3:return `三条 ${rankCN(a)}`;case 2:return `两对 ${rankCN(a)} 和 ${rankCN(b)}`;
   case 1:return `一对 ${rankCN(a)}`;default:return `高牌 ${rankCN(a)}`;}}
@@ -441,7 +458,7 @@ function round5(x){return Math.max(5,Math.round(x/5)*5);}
 function pc(x){return Math.round(x*100)+'%';}
 function cardTxt(c){return rankCN(c>>2)+SUIT_SYM[c&3];}
 function cardHTML(c,size){return `<span class="card ${size} s-${SUIT_CLS[c&3]}"><b>${rankCN(c>>2)}</b><i>${SUIT_SYM[c&3]}</i></span>`;}
-function posLabel(pos){return `${POS_NAMES[pos]}（${POS_CN[pos]}）`;}
+function posLabel(pos){return tx(`${POS_NAMES[pos]}（${POS_CN[pos]}）`,POS_NAMES[pos]);}
 function load(k,d){try{const v=JSON.parse(localStorage.getItem(k));return v?Object.assign({},d,v):Object.assign({},d);}catch(e){return Object.assign({},d);}}
 function save(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
 function popc(m){let n=0;while(m){m&=m-1;n++;}return n;}
@@ -461,38 +478,39 @@ function classify(h1,h2,B){
   const r1=h1>>2,r2=h2>>2;const all=[h1,h2].concat(B);const v=evalHand(all),cat=v>>20;
   const bv=evalHand(B),bcat=bv>>20;
   const br=[...new Set(B.map(c=>c>>2))].sort((a,b)=>b-a);
-  const hiC=Math.max(r1,r2);let b='air',d='';
+  const hiC=Math.max(r1,r2);let b='air',d='',top=false,ah=false;
   const pairLogic=pr=>{
     if(r1===r2){
-      if(pr>br[0]){b='good';d=`超对（${rankCN(pr)}${rankCN(pr)}）`;}
-      else if(br.length>1&&pr>br[1]){b='medium';d=`口袋对 ${rankCN(pr)}${rankCN(pr)}（低于顶张）`;}
-      else{b='weak';d=`小口袋对 ${rankCN(pr)}${rankCN(pr)}`;}
+      if(pr>br[0]){b='good';top=true;d=tx(`超对（${rankCN(pr)}${rankCN(pr)}）`,`overpair (${rankCN(pr)}${rankCN(pr)})`);}
+      else if(br.length>1&&pr>br[1]){b='medium';d=tx(`口袋对 ${rankCN(pr)}${rankCN(pr)}（低于顶张）`,`pocket pair ${rankCN(pr)}${rankCN(pr)} (below the top card)`);}
+      else{b='weak';d=tx(`小口袋对 ${rankCN(pr)}${rankCN(pr)}`,`small pocket pair ${rankCN(pr)}${rankCN(pr)}`);}
     }else{
       const k=pr===r1?r2:r1;
-      if(pr===br[0]){b=k>=9?'good':'medium';d=`顶对（${rankCN(pr)}），踢脚 ${rankCN(k)}`;}
-      else if(pr===br[1]){b='medium';d=`中对（${rankCN(pr)}）`;}
-      else{b='weak';d=`底对（${rankCN(pr)}）`;}
+      if(pr===br[0]){b=k>=9?'good':'medium';top=true;d=tx(`顶对（${rankCN(pr)}），踢脚 ${rankCN(k)}`,`top pair (${rankCN(pr)}), ${rankCN(k)} kicker`);}
+      else if(pr===br[1]){b='medium';d=tx(`中对（${rankCN(pr)}）`,`middle pair (${rankCN(pr)})`);}
+      else{b='weak';d=tx(`底对（${rankCN(pr)}）`,`bottom pair (${rankCN(pr)})`);}
     }
   };
-  if(cat>=4){if(B.length===5&&v===bv){b='air';d='打公共牌';}else{b='strong';d=handName(v);}}
-  else if(cat===3){if(bcat===3){b=hiC>=11?'weak':'air';d='公共牌三条';}else{b='strong';d=r1===r2?`暗三（${rankCN(r1)}）`:`三条 ${rankCN((v>>16)&15)}`;}}
+  if(cat>=4){if(B.length===5&&v===bv){b='air';d=tx('打公共牌','playing the board');}else{b='strong';d=handName(v);}}
+  else if(cat===3){if(bcat===3){b=hiC>=11?'weak':'air';d=tx('公共牌三条','trips on the board');}else{b='strong';d=r1===r2?tx(`暗三（${rankCN(r1)}）`,`set (${rankCN(r1)}s)`):tx(`三条 ${rankCN((v>>16)&15)}`,`trips ${rankCN((v>>16)&15)}`);}}
   else if(cat===2){
     if(bcat===0){b='strong';d=handName(v);}
     else if(r1===r2)pairLogic(r1);
-    else{const hit=B.some(c=>(c>>2)===r1)?r1:B.some(c=>(c>>2)===r2)?r2:-1;if(hit>=0)pairLogic(hit);else{b='air';d=hiC===12?'A 高（公共对子）':'高牌（公共对子）';}}
+    else{const hit=B.some(c=>(c>>2)===r1)?r1:B.some(c=>(c>>2)===r2)?r2:-1;if(hit>=0)pairLogic(hit);else{b='air';ah=hiC===12;d=hiC===12?tx('A 高（公共对子）','ace-high (paired board)'):tx('高牌（公共对子）','high card (paired board)');}}
   }
-  else if(cat===1){if(bcat===1){b='air';d=hiC===12?'A 高（公共对子）':'高牌（公共对子）';}else pairLogic((v>>16)&15);}
-  else{d=hiC===12?'A 高':`${rankCN(hiC)} 高`;if(B.length===3&&Math.min(r1,r2)>br[0])d='两张高张';}
+  else if(cat===1){if(bcat===1){b='air';ah=hiC===12;d=hiC===12?tx('A 高（公共对子）','ace-high (paired board)'):tx('高牌（公共对子）','high card (paired board)');}else pairLogic((v>>16)&15);}
+  else{ah=hiC===12;d=hiC===12?tx('A 高','ace-high'):tx(`${rankCN(hiC)} 高`,`${rankCN(hiC)}-high`);if(B.length===3&&Math.min(r1,r2)>br[0]){ah=false;d=tx('两张高张','two overcards');}}
   let fd=false,nut=false,sd=null;
   if(B.length<5&&cat<5){
     for(let s=0;s<4;s++){const hs=((h1&3)===s?1:0)+((h2&3)===s?1:0);if(!hs)continue;let bs=0;for(const c of B)if((c&3)===s)bs++;if(hs+bs===4){fd=true;if(((h1&3)===s&&r1===12)||((h2&3)===s&&r2===12))nut=true;}}
     let mask=0,bm=0;for(const c of all)mask|=1<<(c>>2);for(const c of B)bm|=1<<(c>>2);
     if(STR[mask]<0){let outs=0;for(let x=0;x<13;x++){if(mask>>x&1)continue;if(STR[mask|1<<x]>=0&&STR[bm|1<<x]<0)outs++;}sd=outs>=2?'oesd':outs===1?'gut':null;}
   }
-  const dl=[];if(fd)dl.push(nut?'坚果同花听牌':'同花听牌');if(sd==='oesd')dl.push('两头顺子听牌');if(sd==='gut')dl.push('卡顺听牌');
+  const dl=[];if(fd)dl.push(nut?tx('坚果同花听牌','nut flush draw'):tx('同花听牌','flush draw'));if(sd==='oesd')dl.push(tx('两头顺子听牌','open-ended straight draw'));if(sd==='gut')dl.push(tx('卡顺听牌','gutshot'));
   if(b==='air'||b==='weak'){if(fd&&sd)b='strongdraw';else if(fd||sd==='oesd')b=(b==='weak'||nut)?'strongdraw':'draw';else if(sd==='gut'&&b==='air')b='weakdraw';}
   else if(b==='medium'&&(fd||sd==='oesd'))b='good';
-  return{b,d,draw:dl.join(' + ')};
+  // top: top pair or an overpair; aceHigh: no pair, ace-high (used by the AI's calling logic, independent of language)
+  return{b,d,draw:dl.join(' + '),top,aceHigh:ah};
 }
 const AGG={strong:1,good:.85,strongdraw:.85,medium:.4,draw:.55,weak:.2,weakdraw:.3,air:.22};
 // raises (check-raises especially) are much stronger than bets: value hands plus bluffs that carry draws, very little pure air
@@ -503,7 +521,8 @@ const CBETM_WET={strong:1,good:.9,strongdraw:.95,medium:.5,draw:.85,weak:.35,wea
 const BARRELM={strong:1,good:.85,strongdraw:.9,medium:.45,draw:.75,weak:.25,weakdraw:.5,air:.3};
 const CALLM={strong:.55,good:1,strongdraw:.8,medium:.9,draw:.85,weak:.5,weakdraw:.35,air:.08};
 const CHECKM={strong:.45,good:.7,strongdraw:.6,medium:1,draw:.8,weak:1,weakdraw:1,air:1};
-const BUCKET_UI=[['strong','强牌（两对+）'],['good','好牌（超对/顶对强踢脚）'],['medium','中等成牌'],['draw','听牌'],['weak','弱对'],['air','空气']];
+const BUCKET_UI=[['strong','强牌（两对+）','Strong (two pair+)'],['good','好牌（超对/顶对强踢脚）','Good (overpair / top pair good kicker)'],['medium','中等成牌','Medium made hands'],['draw','听牌','Draws'],['weak','弱对','Weak pairs'],['air','空气','Air']];
+function bucketName(x){return tx(x[1],x[2]);}
 function bucketGroup(b){return b==='strongdraw'||b==='weakdraw'?'draw':b;}
 
 function texture(B){
@@ -513,7 +532,7 @@ function texture(B){
   let high=0;for(let r=8;r<=12;r++)if(mask>>r&1)high++;
   // flush draws plus connected broadway cards make a board wet; a low two-tone board like 8-4-2 stays fairly dry
   const wet=ms>=3||conn>=3||(ms===2&&conn>=2&&high>=2);
-  const parts=[wet?'湿润':'干燥',ms>=3?'同花面':ms===2?'两色':'彩虹'];if(conn>=3)parts.push('连张');if(paired)parts.push('对子面');
+  const parts=[wet?tx('湿润','wet'):tx('干燥','dry'),ms>=3?tx('同花面','monotone'):ms===2?tx('两色','two-tone'):tx('彩虹','rainbow')];if(conn>=3)parts.push(tx('连张','connected'));if(paired)parts.push(tx('对子面','paired'));
   return{wet,label:parts.join(' · ')};
 }
 
@@ -556,7 +575,8 @@ function put(p,amt){amt=Math.max(0,Math.min(amt,p.stack));p.stack-=amt;p.bet+=am
 function nextNeeding(from){for(let k=1;k<=9;k++){const i=(from+k)%9,q=P[i];if(!q.folded&&!q.allIn&&(!q.acted||q.bet<G.currentBet))return i;}return -1;}
 function order(i){const off=(i-G.button+9)%9;return off===0?9:off;}
 function isIP(pi){return P.filter(q=>!q.folded&&q.i!==pi).every(q=>order(q.i)<order(pi));}
-function who(p){return `${POS_NAMES[p.pos]} ${p.name}`;}
+function who(p){return LANG==='en'&&p.isUser?`${POS_NAMES[p.pos]} (you)`:`${POS_NAMES[p.pos]} ${nmOf(p)}`;}
+function cap(t){return LANG==='en'?t.charAt(0).toUpperCase()+t.slice(1):t;}
 function log(t,cls){G.log.push({t,cls:cls||''});}
 
 function newHand(){
@@ -569,8 +589,8 @@ function newHand(){
   G={button:buttonSeat,deck,board:[],street:0,currentBet:0,minRaise:BB,raiseLevel:0,raisers:[],raiseTo:[],callersAt:[],isoLimpers:0,eqCache:{},limpers:[],callers:0,aggr:[-1,-1,-1,-1],
     toAct:-1,nb:0,over:false,log:(G.log||[]).slice(-120),decisions:[],lastAdvice:null,feedback:null,fast:false,result:null,showAdvice:SETTINGS.mode==='live',handNo:curStats().hands+1,cur:null,uiTo:0,hv:false,hp:false};
   const sb=P[(buttonSeat+1)%9],bb=P[(buttonSeat+2)%9];
-  put(sb,5);put(bb,10);sb.last='小盲 0.5';bb.last='大盲 1';G.currentBet=10;
-  log(`第 ${G.handNo} 手 · 你在 ${posLabel(P[0].pos)} · ${P[0].hole.map(cardTxt).join(' ')}`,'hd');
+  put(sb,5);put(bb,10);sb.last=tx('小盲 0.5','SB 0.5');bb.last=tx('大盲 1','BB 1');G.currentBet=10;
+  log(tx(`第 ${G.handNo} 手 · 你在 ${posLabel(P[0].pos)} · ${P[0].hole.map(cardTxt).join(' ')}`,`Hand #${G.handNo} · you are ${posLabel(P[0].pos)} · ${P[0].hole.map(cardTxt).join(' ')}`),'hd');
   G.toAct=nextNeeding(bb.i);
   schedule();
 }
@@ -663,11 +683,13 @@ function preExploit(pi,ctx,k,gtoCont){
   // how wide his estimated opening range is, vs a GTO open from the same seat
   let rw=0,gw=0;for(let j=0;j<169;j++){const n=clsCombos(j);rw+=n*Math.min(1,R.pfW[j]);gw+=n*T.RFI[R.pos].r[j];}
   rw/=1326;gw/=1326;
-  const wtxt=`他在 ${POS_NAMES[R.pos]} 的开池范围估计约 ${pc(rw)}，GTO 约 ${pc(gw)}`;
+  const wtxt=tx(`他在 ${POS_NAMES[R.pos]} 的开池范围估计约 ${pc(rw)}，GTO 约 ${pc(gw)}`,`His estimated opening range from ${POS_NAMES[R.pos]} is about ${pc(rw)}; GTO is about ${pc(gw)}`);
   if(gtoCont<0.5&&eS-eG>=0.05&&re>=ax.needM+0.03)
-    return `${wtxt}${rw>gw*1.1?'，比 GTO 宽':''}。${nm} 对 GTO 开池范围的胜率约 ${pc(eG)}，对他的范围约 ${pc(eS)}，折算后 ${pc(re)}，高于需要的 ${pc(ax.needM)}。剥削的话可以考虑${eS>=0.58?'3bet':'跟注'}。`;
+    return tx(`${wtxt}${rw>gw*1.1?'，比 GTO 宽':''}。${nm} 对 GTO 开池范围的胜率约 ${pc(eG)}，对他的范围约 ${pc(eS)}，折算后 ${pc(re)}，高于需要的 ${pc(ax.needM)}。剥削的话可以考虑${eS>=0.58?'3bet':'跟注'}。`,
+      `${wtxt}${rw>gw*1.1?', wider than GTO':''}. ${nm} has about ${pc(eG)} equity against a GTO opening range and about ${pc(eS)} against his range; after adjustment ${pc(re)}, above the ${pc(ax.needM)} you need. As an exploit, consider ${eS>=0.58?'3-betting':'calling'}.`);
   if(gtoCont>=0.5&&eG-eS>=0.04&&re<ax.needM)
-    return `${wtxt}。${rw<gw*0.9?'他的范围更紧、更强':'他的范围虽然不比 GTO 紧，但多出来的主要是高张牌，'+nm+' 容易被压制'}。${nm} 对 GTO 开池范围的胜率约 ${pc(eG)}，对他的范围只有约 ${pc(eS)}，折算后 ${pc(re)}，低于需要的 ${pc(ax.needM)}。剥削的话可以考虑弃牌。`;
+    return tx(`${wtxt}。${rw<gw*0.9?'他的范围更紧、更强':'他的范围虽然不比 GTO 紧，但多出来的主要是高张牌，'+nm+' 容易被压制'}。${nm} 对 GTO 开池范围的胜率约 ${pc(eG)}，对他的范围只有约 ${pc(eS)}，折算后 ${pc(re)}，低于需要的 ${pc(ax.needM)}。剥削的话可以考虑弃牌。`,
+      `${wtxt}. ${rw<gw*0.9?'His range is tighter and stronger':'His range is not tighter than GTO, but the extra hands are mostly high cards, so '+nm+' is often dominated'}. ${nm} has about ${pc(eG)} equity against a GTO opening range but only about ${pc(eS)} against his range; after adjustment ${pc(re)}, below the ${pc(ax.needM)} you need. As an exploit, consider folding.`);
   return null;
 }
 function approxCtx(pi,sub){
@@ -725,75 +747,77 @@ function pfRaiseTo(pi,ctx){
 function sitText(ctx,p){
   const cb=fmt(G.currentBet);
   switch(ctx.kind){
-    case 'rfi':return `前面所有人弃牌，你在 ${posLabel(p.pos)} 首个入池。`;
-    case 'iso':case 'limpSB':case 'limpBB':return `前面有 ${G.limpers.length} 人溜入（只跟 1bb），你在 ${posLabel(p.pos)}。`;
-    case 'vsOpen':{const op=P[ctx.op];return `${who(op)} 开池加注到 ${cb}bb${G.callers?`，${G.callers} 人跟注`:''}，你在 ${posLabel(p.pos)}。`;}
-    case 'vs3o':return `你开池后，${who(P[ctx.tb])} 3bet 到 ${cb}bb。`;
-    case 'vs3c':return `${who(P[G.raisers[0]])} 开池，${who(P[ctx.tb])} 3bet 到 ${cb}bb。`;
-    case 'vs4':return `你 3bet 之后，对手 4bet 到 ${cb}bb。`;
-    case 'vs4c':return `前面已经有 4bet 到 ${cb}bb。`;
+    case 'rfi':return tx(`前面所有人弃牌，你在 ${posLabel(p.pos)} 首个入池。`,`Folded to you in ${posLabel(p.pos)}; you are first in.`);
+    case 'iso':case 'limpSB':case 'limpBB':return tx(`前面有 ${G.limpers.length} 人溜入（只跟 1bb），你在 ${posLabel(p.pos)}。`,`${G.limpers.length} player${G.limpers.length>1?'s':''} limped in (just called 1bb); you are in ${posLabel(p.pos)}.`);
+    case 'vsOpen':{const op=P[ctx.op];return tx(`${who(op)} 开池加注到 ${cb}bb${G.callers?`，${G.callers} 人跟注`:''}，你在 ${posLabel(p.pos)}。`,`${who(op)} opened to ${cb}bb${G.callers?`, ${G.callers} caller${G.callers>1?'s':''}`:''}; you are in ${posLabel(p.pos)}.`);}
+    case 'vs3o':return tx(`你开池后，${who(P[ctx.tb])} 3bet 到 ${cb}bb。`,`You opened and ${who(P[ctx.tb])} 3-bet to ${cb}bb.`);
+    case 'vs3c':return tx(`${who(P[G.raisers[0]])} 开池，${who(P[ctx.tb])} 3bet 到 ${cb}bb。`,`${who(P[G.raisers[0]])} opened and ${who(P[ctx.tb])} 3-bet to ${cb}bb.`);
+    case 'vs4':return tx(`你 3bet 之后，对手 4bet 到 ${cb}bb。`,`You 3-bet and your opponent 4-bet to ${cb}bb.`);
+    case 'vs4c':return tx(`前面已经有 4bet 到 ${cb}bb。`,`There is already a 4-bet to ${cb}bb in front of you.`);
     case 'approx':{
-      const R=P[ctx.ri],tail=`你在 ${posLabel(p.pos)}${ctx.behind?`，你后面还有 ${ctx.behind} 人没行动`:''}。`;
-      if(ctx.sub==='vsIso')return `${G.isoLimpers} 人溜入后，${who(R)} 隔离加注到 ${cb}bb${G.callers?`，${G.callers} 人跟注`:''}，${tail}`;
-      if(ctx.sub==='vsOddOpen')return `${who(R)} 开池加注到 ${cb}bb（标准开池约 ${R.pos===7?3:2.5}bb）${G.callers?`，${G.callers} 人跟注`:''}，${tail}`;
-      if(ctx.sub==='jam')return `${who(R)} ${G.raiseLevel===1?'开池':'再加注'}全下 ${cb}bb，${tail}`;
-      if(ctx.sub==='vs4Odd')return `${who(R)} 4bet 到 ${cb}bb（尺度不标准），${tail}`;
-      return `${who(R)} 3bet 到 ${cb}bb（${G.isoLimpers?'前面有人溜入':'尺度不标准'}），${tail}`;
+      const R=P[ctx.ri],tail=tx(`你在 ${posLabel(p.pos)}${ctx.behind?`，你后面还有 ${ctx.behind} 人没行动`:''}。`,`you are in ${posLabel(p.pos)}${ctx.behind?`, with ${ctx.behind} player${ctx.behind>1?'s':''} still to act behind you`:''}.`);
+      if(ctx.sub==='vsIso')return tx(`${G.isoLimpers} 人溜入后，${who(R)} 隔离加注到 ${cb}bb${G.callers?`，${G.callers} 人跟注`:''}，${tail}`,`After ${G.isoLimpers} limper${G.isoLimpers>1?'s':''}, ${who(R)} isolated to ${cb}bb${G.callers?`, ${G.callers} caller${G.callers>1?'s':''}`:''}; ${tail}`);
+      if(ctx.sub==='vsOddOpen')return tx(`${who(R)} 开池加注到 ${cb}bb（标准开池约 ${R.pos===7?3:2.5}bb）${G.callers?`，${G.callers} 人跟注`:''}，${tail}`,`${who(R)} opened to ${cb}bb (a standard open is about ${R.pos===7?3:2.5}bb)${G.callers?`, ${G.callers} caller${G.callers>1?'s':''}`:''}; ${tail}`);
+      if(ctx.sub==='jam')return tx(`${who(R)} ${G.raiseLevel===1?'开池':'再加注'}全下 ${cb}bb，${tail}`,`${who(R)} ${G.raiseLevel===1?'open-shoved':'re-raised all-in'} for ${cb}bb; ${tail}`);
+      if(ctx.sub==='vs4Odd')return tx(`${who(R)} 4bet 到 ${cb}bb（尺度不标准），${tail}`,`${who(R)} 4-bet to ${cb}bb (a non-standard size); ${tail}`);
+      return tx(`${who(R)} 3bet 到 ${cb}bb（${G.isoLimpers?'前面有人溜入':'尺度不标准'}），${tail}`,`${who(R)} 3-bet to ${cb}bb (${G.isoLimpers?'after a limp':'a non-standard size'}); ${tail}`);
     }
-    default:return `面对 ${cb}bb 的大额加注 / 全下。`;
+    default:return tx(`面对 ${cb}bb 的大额加注 / 全下。`,`Facing a large raise / all-in of ${cb}bb.`);
   }
 }
 function approxReasons(ctx,k,fr,p){
   const out=[],nm=clsName(k),R=P[ctx.ri],toCall=Math.min(G.currentBet-p.bet,p.stack),pot=potTotal();
-  out.push(`跟注需要胜率 ${pc(ctx.need)}：你要跟 ${fmt(toCall)}bb，跟注后底池是 ${fmt(pot+toCall)}bb。`);
+  out.push(tx(`跟注需要胜率 ${pc(ctx.need)}：你要跟 ${fmt(toCall)}bb，跟注后底池是 ${fmt(pot+toCall)}bb。`,`Calling needs ${pc(ctx.need)} equity: you call ${fmt(toCall)}bb and the pot will be ${fmt(pot+toCall)}bb.`));
   if(ctx.sub==='vsOddOpen'||ctx.sub==='vsIso'){
     const std=ctx.sub==='vsIso'?30+G.isoLimpers*BB:(R.pos===7?30:25);
     const tc=Math.max(0,std-p.bet),ps=pot-G.currentBet+std;
-    if(Math.abs(G.currentBet-std)>0.1*std)out.push(`作为对比，如果加注到标准的 ${fmt(std)}bb，你只需要 ${pc(tc/(ps+tc))} 的胜率。尺度越大，需要的胜率越高，防守范围就要越紧。`);
+    if(Math.abs(G.currentBet-std)>0.1*std)out.push(tx(`作为对比，如果加注到标准的 ${fmt(std)}bb，你只需要 ${pc(tc/(ps+tc))} 的胜率。尺度越大，需要的胜率越高，防守范围就要越紧。`,`For comparison, against a standard raise to ${fmt(std)}bb you would need only ${pc(tc/(ps+tc))}. The bigger the raise, the more equity you need and the tighter you defend.`));
   }
   const e=ctx.eqE[k],re=e*ctx.realA[k];
-  out.push(ctx.allin?`${nm} 对 ${who(R)} 估计范围的胜率约 ${pc(ctx.eqA[k])}。已经是全下，后面没有下注了，胜率可以全部实现。`
-    :`${nm} 对 ${who(R)} 估计范围的胜率约 ${pc(ctx.eqA[k])}${ctx.nIn?`；但已经有 ${ctx.nIn} 人跟注，你要同时面对 ${ctx.nIn+1} 个对手${ctx.behind?'':`，胜率只有约 ${pc(e)}`}`:''}${ctx.behind?`；后面 ${ctx.behind} 人里预计约有 ${ctx.mExp.toFixed(1)} 人会跟进来，按多人底池折算后胜率约 ${pc(e)}`:''}。${ctx.ip?'你翻后有位置':'你翻后没有位置'}，按能实现的比例折算后约 ${pc(re)}。`);
-  if(!ctx.allin&&ctx.spr<3.5&&ctx.nIn+ctx.mExp>=1)out.push(`跟注后剩下的筹码是底池的 ${ctx.spr.toFixed(1)} 倍，但这是 ${ctx.nIn+1+(ctx.mExp>=0.5?2:1)} 人左右的多人底池：翻牌后好几个人都可能下注，弱牌很难看到摊牌，胜率实现得很差。多人底池里要的是能做成坚果的牌（同花、口袋对、连张），而不是非同花的散牌。`);
-  else if(!ctx.allin&&ctx.spr<3.5)out.push(`跟注后剩下的筹码只有底池的 ${ctx.spr.toFixed(1)} 倍，接近全下，后面很难被打走，所以胜率几乎能全部实现。`);
-  if(ctx.behind)out.push(`你后面还有 ${ctx.behind} 人没行动，他们可能跟进来变成多人底池。多人底池里非同花、不连张的牌很难赢，同花牌和口袋对相对更好。如果有人跟进来，底池也更大，所以把需要的胜率按约 ${pc(ctx.needM)} 计算。`);
-  if(ctx.sub==='vsIso')out.push(`对手是在 ${G.isoLimpers} 个溜入者后面隔离加注，用的不是开池范围，所以不能套用"面对开池"的范围表。`);
+  out.push(ctx.allin?tx(`${nm} 对 ${who(R)} 估计范围的胜率约 ${pc(ctx.eqA[k])}。已经是全下，后面没有下注了，胜率可以全部实现。`,`${nm} has about ${pc(ctx.eqA[k])} equity against ${who(R)}'s estimated range. It is already all-in with no betting left, so you realise all of it.`)
+    :tx(`${nm} 对 ${who(R)} 估计范围的胜率约 ${pc(ctx.eqA[k])}${ctx.nIn?`；但已经有 ${ctx.nIn} 人跟注，你要同时面对 ${ctx.nIn+1} 个对手${ctx.behind?'':`，胜率只有约 ${pc(e)}`}`:''}${ctx.behind?`；后面 ${ctx.behind} 人里预计约有 ${ctx.mExp.toFixed(1)} 人会跟进来，按多人底池折算后胜率约 ${pc(e)}`:''}。${ctx.ip?'你翻后有位置':'你翻后没有位置'}，按能实现的比例折算后约 ${pc(re)}。`,
+      `${nm} has about ${pc(ctx.eqA[k])} equity against ${who(R)}'s estimated range${ctx.nIn?`; but ${ctx.nIn} player${ctx.nIn>1?'s have':' has'} already called, so you face ${ctx.nIn+1} opponents at once${ctx.behind?'':` and have only about ${pc(e)}`}`:''}${ctx.behind?`; of the ${ctx.behind} player${ctx.behind>1?'s':''} behind, about ${ctx.mExp.toFixed(1)} are expected to come along, which brings it to about ${pc(e)} multiway`:''}. ${ctx.ip?'You will have position after the flop':'You will be out of position after the flop'}; adjusted for how much of it you can realise, about ${pc(re)}.`));
+  if(!ctx.allin&&ctx.spr<3.5&&ctx.nIn+ctx.mExp>=1)out.push(tx(`跟注后剩下的筹码是底池的 ${ctx.spr.toFixed(1)} 倍，但这是 ${ctx.nIn+1+(ctx.mExp>=0.5?2:1)} 人左右的多人底池：翻牌后好几个人都可能下注，弱牌很难看到摊牌，胜率实现得很差。多人底池里要的是能做成坚果的牌（同花、口袋对、连张），而不是非同花的散牌。`,`After calling, the stacks behind are ${ctx.spr.toFixed(1)} times the pot, but this is a pot of about ${ctx.nIn+1+(ctx.mExp>=0.5?2:1)} players: several of them can bet after the flop, weak hands rarely reach showdown, and equity is realised poorly. Multiway pots want hands that make the nuts (suited cards, pocket pairs, connectors), not offsuit trash.`));
+  else if(!ctx.allin&&ctx.spr<3.5)out.push(tx(`跟注后剩下的筹码只有底池的 ${ctx.spr.toFixed(1)} 倍，接近全下，后面很难被打走，所以胜率几乎能全部实现。`,`After calling, the stacks behind are only ${ctx.spr.toFixed(1)} times the pot, close to all-in; you are hard to push off the hand, so you realise almost all your equity.`));
+  if(ctx.behind)out.push(tx(`你后面还有 ${ctx.behind} 人没行动，他们可能跟进来变成多人底池。多人底池里非同花、不连张的牌很难赢，同花牌和口袋对相对更好。如果有人跟进来，底池也更大，所以把需要的胜率按约 ${pc(ctx.needM)} 计算。`,`${ctx.behind} player${ctx.behind>1?'s are':' is'} still to act behind you and may come along, making the pot multiway. Offsuit, unconnected hands rarely win multiway; suited hands and pocket pairs do better. If someone comes along the pot is also bigger, so the equity you need is taken as about ${pc(ctx.needM)}.`));
+  if(ctx.sub==='vsIso')out.push(tx(`对手是在 ${G.isoLimpers} 个溜入者后面隔离加注，用的不是开池范围，所以不能套用"面对开池"的范围表。`,`Your opponent isolated behind ${G.isoLimpers} limper${G.isoLimpers>1?'s':''}, which is not an opening range, so the "facing an open" chart does not apply.`));
   const nd=ctx.needM;
-  out.push(fr.raise>=0.5?`${nm} 对他的范围胜率很高，适合再加注。`:fr.call+fr.raise<0.05?`折算后的胜率 ${pc(re)} 低于需要的 ${pc(nd)}，弃牌。`:fr.fold<0.05?`折算后的胜率 ${pc(re)} 高于需要的 ${pc(nd)}，可以继续。`:`折算后的胜率 ${pc(re)} 和需要的 ${pc(nd)} 很接近，属于边缘牌。`);
+  out.push(fr.raise>=0.5?tx(`${nm} 对他的范围胜率很高，适合再加注。`,`${nm} has high equity against his range: a good hand to re-raise.`):fr.call+fr.raise<0.05?tx(`折算后的胜率 ${pc(re)} 低于需要的 ${pc(nd)}，弃牌。`,`Adjusted equity ${pc(re)} is below the ${pc(nd)} needed: fold.`):fr.fold<0.05?tx(`折算后的胜率 ${pc(re)} 高于需要的 ${pc(nd)}，可以继续。`,`Adjusted equity ${pc(re)} is above the ${pc(nd)} needed: continue.`):tx(`折算后的胜率 ${pc(re)} 和需要的 ${pc(nd)} 很接近，属于边缘牌。`,`Adjusted equity ${pc(re)} is close to the ${pc(nd)} needed: a borderline hand.`));
   return out;
 }
 function preReasons(ctx,k,fr,rp,cp,p){
   if(ctx.kind==='approx')return approxReasons(ctx,k,fr,p);
   const out=[],nm=clsName(k),PN=POS_NAMES[p.pos];
-  const verdict=fr.raise>=0.95?'是纯加注':fr.raise>=0.05&&fr.call>=0.05?'在加注和跟注之间混合':fr.raise>=0.05?'是混合加注（一部分频率加注，其余弃牌）':fr.call>=0.95?(G.currentBet>p.bet?'是纯跟注':'直接过牌'):fr.call>=0.05?'是混合跟注':'不在继续范围内，弃牌';
+  const verdict=LANG==='en'?(fr.raise>=0.95?'is a pure raise':fr.raise>=0.05&&fr.call>=0.05?'mixes between raising and calling':fr.raise>=0.05?'is a mixed raise (raise part of the time, fold the rest)':fr.call>=0.95?(G.currentBet>p.bet?'is a pure call':'just checks'):fr.call>=0.05?'is a mixed call':'is not in the continuing range: fold')
+    :fr.raise>=0.95?'是纯加注':fr.raise>=0.05&&fr.call>=0.05?'在加注和跟注之间混合':fr.raise>=0.05?'是混合加注（一部分频率加注，其余弃牌）':fr.call>=0.95?(G.currentBet>p.bet?'是纯跟注':'直接过牌'):fr.call>=0.05?'是混合跟注':'不在继续范围内，弃牌';
   switch(ctx.kind){
     case 'rfi':
-      out.push(`${PN} 开池范围约 ${rp}%。${nm} ${verdict}。`);
-      if(p.pos<=2)out.push('前位后面还有很多人没行动，有人拿到大牌的概率高，范围必须紧。');
-      else if(p.pos>=5&&p.pos<=6)out.push('后位后面只剩少数人，而且翻后大多有位置，可以开得更宽。');
-      if(p.pos===7)out.push('简化：小盲按“加注或弃牌”处理，真实求解器里小盲会有一部分平跟。');
+      out.push(tx(`${PN} 开池范围约 ${rp}%。${nm} ${verdict}。`,`The ${PN} opening range is about ${rp}%. ${nm} ${verdict}.`));
+      if(p.pos<=2)out.push(tx('前位后面还有很多人没行动，有人拿到大牌的概率高，范围必须紧。','From early position many players are still to act and someone is likely to hold a big hand, so the range must be tight.'));
+      else if(p.pos>=5&&p.pos<=6)out.push(tx('后位后面只剩少数人，而且翻后大多有位置，可以开得更宽。','From late position only a few players are left behind and you usually have position after the flop, so you can open wider.'));
+      if(p.pos===7)out.push(tx('简化：小盲按“加注或弃牌”处理，真实求解器里小盲会有一部分平跟。','Simplification: the small blind is treated as raise-or-fold; a real solver also limps some hands from the SB.'));
       break;
     case 'iso':case 'limpSB':case 'limpBB':
-      out.push(`有人溜入时，用比正常开池稍紧的范围加注隔离，尺度约 3bb + 每个溜入者 1bb。${nm} ${verdict}。`);
-      if(ctx.kind==='limpBB')out.push('大盲可以免费看翻牌，不值得加注的牌直接过牌。');
-      out.push('GTO 打法里几乎不主动溜入，溜入范围很容易被剥削。');
+      out.push(tx(`有人溜入时，用比正常开池稍紧的范围加注隔离，尺度约 3bb + 每个溜入者 1bb。${nm} ${verdict}。`,`Against limpers, isolate with a range slightly tighter than a normal open, sized about 3bb + 1bb per limper. ${nm} ${verdict}.`));
+      if(ctx.kind==='limpBB')out.push(tx('大盲可以免费看翻牌，不值得加注的牌直接过牌。','The big blind sees the flop for free: hands not worth a raise just check.'));
+      out.push(tx('GTO 打法里几乎不主动溜入，溜入范围很容易被剥削。','GTO almost never open-limps; a limping range is easy to exploit.'));
       break;
     case 'vsOpen':{
       const op=P[ctx.op];
-      out.push(`面对 ${POS_NAMES[op.pos]} 开池：3bet 约 ${rp}%，跟注约 ${cp}%。${nm} ${verdict}。`);
-      if(ctx.tier===0)out.push('前位开池的范围很强，你继续的范围也要相应收紧。');
-      if(ctx.type==='bb')out.push('大盲已投入 1bb，跟注价格便宜，所以防守范围最宽。');
-      if(ctx.type==='sb')out.push('小盲翻后没有位置，后面还有大盲，以 3bet 或弃牌为主，很少平跟。');
-      if(ctx.type==='ipMid'){const bh=P.filter(q=>q!==p&&!q.folded&&!q.acted).length;out.push(`你后面还有 ${bh} 人没行动。平跟容易被后面的人挤压（squeeze），还会让盲注便宜入池变成多人底池，所以 GTO 在这里以 3bet 或弃牌为主，平跟只用少量中小对子和同花高张。`);}
-      if(ctx.type==='ip')out.push('你在庄位，翻后一定有位置，后面只剩盲注，所以可以比其他位置多平跟一些牌。');
-      if((ctx.type==='ip'||ctx.type==='ipMid')&&G.callers>0)out.push(`已经有 ${G.callers} 人跟注，3bet 尺度要相应加大。`);
+      out.push(tx(`面对 ${POS_NAMES[op.pos]} 开池：3bet 约 ${rp}%，跟注约 ${cp}%。${nm} ${verdict}。`,`Facing a ${POS_NAMES[op.pos]} open: 3-bet about ${rp}%, call about ${cp}%. ${nm} ${verdict}.`));
+      if(ctx.tier===0)out.push(tx('前位开池的范围很强，你继续的范围也要相应收紧。','An early-position opening range is strong, so your continuing range must be tighter too.'));
+      if(ctx.type==='bb')out.push(tx('大盲已投入 1bb，跟注价格便宜，所以防守范围最宽。','The big blind already has 1bb in, so calling is cheap and it defends the widest.'));
+      if(ctx.type==='sb')out.push(tx('小盲翻后没有位置，后面还有大盲，以 3bet 或弃牌为主，很少平跟。','The small blind is out of position after the flop and the big blind is still behind, so it mostly 3-bets or folds and rarely flats.'));
+      if(ctx.type==='ipMid'){const bh=P.filter(q=>q!==p&&!q.folded&&!q.acted).length;out.push(tx(`你后面还有 ${bh} 人没行动。平跟容易被后面的人挤压（squeeze），还会让盲注便宜入池变成多人底池，所以 GTO 在这里以 3bet 或弃牌为主，平跟只用少量中小对子和同花高张。`,`${bh} player${bh>1?'s are':' is'} still to act behind you. Flatting invites a squeeze and lets the blinds in cheaply for a multiway pot, so GTO mostly 3-bets or folds here and flats only a few small/medium pairs and suited broadways.`));}
+      if(ctx.type==='ip')out.push(tx('你在庄位，翻后一定有位置，后面只剩盲注，所以可以比其他位置多平跟一些牌。','On the button you always have position after the flop and only the blinds are left, so you can flat more hands than from other seats.'));
+      if((ctx.type==='ip'||ctx.type==='ipMid')&&G.callers>0)out.push(tx(`已经有 ${G.callers} 人跟注，3bet 尺度要相应加大。`,`${G.callers} player${G.callers>1?'s have':' has'} already called, so the 3-bet size goes up accordingly.`));
       break;}
-    case 'vs3o':out.push(`你开池后被 3bet：4bet 约 ${rp}%，跟注约 ${cp}%。${nm} ${verdict}。`);out.push('被 3bet 后，大部分边缘开池牌要放弃，否则会被对手剥削。');break;
-    case 'vs3c':out.push(`前面已经有加注和 3bet，冷跟和冷 4bet 的范围非常窄（合计约 ${Math.round((rp+cp)*10)/10}%）。${nm} ${verdict}。`);break;
-    case 'vs4':out.push(`你的 3bet 遭遇 4bet：全下约 ${rp}%，跟注约 ${cp}%。${nm} ${verdict}。`);break;
-    default:out.push(`面对全下级别的加注，只用最强的牌继续（约 ${Math.round((rp+cp)*10)/10}%）。${nm} ${verdict}。`);
+    case 'vs3o':out.push(tx(`你开池后被 3bet：4bet 约 ${rp}%，跟注约 ${cp}%。${nm} ${verdict}。`,`Your open was 3-bet: 4-bet about ${rp}%, call about ${cp}%. ${nm} ${verdict}.`));out.push(tx('被 3bet 后，大部分边缘开池牌要放弃，否则会被对手剥削。','Facing a 3-bet, most marginal opening hands must be given up, or you get exploited.'));break;
+    case 'vs3c':out.push(tx(`前面已经有加注和 3bet，冷跟和冷 4bet 的范围非常窄（合计约 ${Math.round((rp+cp)*10)/10}%）。${nm} ${verdict}。`,`There is already a raise and a 3-bet: cold-calling and cold 4-betting ranges are very narrow (about ${Math.round((rp+cp)*10)/10}% in total). ${nm} ${verdict}.`));break;
+    case 'vs4':out.push(tx(`你的 3bet 遭遇 4bet：全下约 ${rp}%，跟注约 ${cp}%。${nm} ${verdict}。`,`Your 3-bet was 4-bet: shove about ${rp}%, call about ${cp}%. ${nm} ${verdict}.`));break;
+    default:out.push(tx(`面对全下级别的加注，只用最强的牌继续（约 ${Math.round((rp+cp)*10)/10}%）。${nm} ${verdict}。`,`Facing an all-in-sized raise, continue only with the strongest hands (about ${Math.round((rp+cp)*10)/10}%). ${nm} ${verdict}.`));
   }
-  if(/^A[2-5]s$/.test(nm)&&fr.raise>0&&ctx.kind!=='rfi')out.push(`${nm} 常用作诈唬加注：手里的 A 降低对手拿到 AA/AK 的概率，还能做成同花或顺子。`);
+  if(/^A[2-5]s$/.test(nm)&&fr.raise>0&&ctx.kind!=='rfi')out.push(tx(`${nm} 常用作诈唬加注：手里的 A 降低对手拿到 AA/AK 的概率，还能做成同花或顺子。`,`${nm} is often used as a bluff raise: your ace makes AA/AK less likely for your opponent, and it can still make a flush or a straight.`));
   return out;
 }
 function advisePre(pi){
@@ -804,9 +828,9 @@ function advisePre(pi){
   const m={check:toCall===0,noRaise:!canRaise};
   const fr=mergedFreq(ctx.tbl,k,m);
   const opts=[];
-  if(toCall>0)opts.push({t:'fold',f:fr.fold,label:'弃牌'});
-  opts.push(toCall>0?{t:'call',f:fr.call,amt:toCall,label:p.stack<=toCall?`跟注全下 ${fmt(toCall)}`:`跟注 ${fmt(toCall)}`}:{t:'check',f:fr.call,label:'过牌'});
-  if(canRaise){const to=pfRaiseTo(pi,ctx);opts.push({t:'raise',f:fr.raise,to,label:to===max?`全下 ${fmt(to)}`:`加注到 ${fmt(to)}`});}
+  if(toCall>0)opts.push({t:'fold',f:fr.fold,label:tx('弃牌','Fold')});
+  opts.push(toCall>0?{t:'call',f:fr.call,amt:toCall,label:p.stack<=toCall?tx(`跟注全下 ${fmt(toCall)}`,`Call all-in ${fmt(toCall)}`):tx(`跟注 ${fmt(toCall)}`,`Call ${fmt(toCall)}`)}:{t:'check',f:fr.call,label:tx('过牌','Check')});
+  if(canRaise){const to=pfRaiseTo(pi,ctx);opts.push({t:'raise',f:fr.raise,to,label:to===max?tx(`全下 ${fmt(to)}`,`All-in ${fmt(to)}`):tx(`加注到 ${fmt(to)}`,`Raise to ${fmt(to)}`)});}
   let rp=0,cp=0;const mat=new Array(169);
   for(let j=0;j<169;j++){const x=mergedFreq(ctx.tbl,j,m);mat[j]=x;rp+=clsCombos(j)*x.raise;cp+=clsCombos(j)*(toCall>0?x.call:0);}
   rp=Math.round(rp/1326*1000)/10;cp=Math.round(cp/1326*1000)/10;
@@ -832,53 +856,53 @@ function advisePost(pi,iters,detail){
     const delayed=street===2&&n===1&&G.aggr[1]<0&&G.aggr[0]===pi&&eq<sT,barrel=street===2&&n===1&&G.aggr[1]===pi&&eq<sT;
     const cb=agg&&street===1&&n===1&&eq<sT?cbetPlan(p,B,tex,eq,vT,cl,ip):delayed?turnPlan(p,B,tex,eq,vT,cl,ip,'delayed'):barrel?turnPlan(p,B,tex,eq,vT,cl,ip,'barrel'):null;
     if(cb){kind='cbet';o=cb.o;why.push(...cb.why);}
-    else if(eq>=sT){kind='value';o={bet:.85,check:.15};why.push('胜率很高，主要用价值下注，从对手更差的牌里拿钱。');
+    else if(eq>=sT){kind='value';o={bet:.85,check:.15};why.push(tx('胜率很高，主要用价值下注，从对手更差的牌里拿钱。','High equity: mostly bet for value and get paid by worse hands.'));
       if(agg&&street===1&&n===1&&eq>=0.9){
         o={bet:.9,check:.1};
-        why.push('你是翻前进攻者，在这个牌面上你的整个范围本来就会高频持续下注。坚果牌跟着范围一起下注：对手的跟注范围里有很多能付钱的牌，过牌反而让他免费看牌，也让你的下注范围变弱。求解器在这类局面里几乎不慢打。');
+        why.push(tx('你是翻前进攻者，在这个牌面上你的整个范围本来就会高频持续下注。坚果牌跟着范围一起下注：对手的跟注范围里有很多能付钱的牌，过牌反而让他免费看牌，也让你的下注范围变弱。求解器在这类局面里几乎不慢打。','You were the preflop aggressor, and on this board your whole range c-bets at a high frequency anyway. Bet the nuts along with the range: his calling range has plenty of hands that pay, while checking gives him a free card and weakens your betting range. Solvers almost never slowplay here.'));
       }else if(!tex.wet&&!river&&n===1&&eq>=0.9){
         const bl=blockerNote(p.hole,B);o=bl?{bet:.5,check:.5}:{bet:.65,check:.35};
-        why.push(`你的牌几乎是坚果，而牌面干燥，对手很难在后面的牌反超你，给他一张免费牌的风险很小。${bl}所以可以经常过牌慢打：让他诈唬，或者在后面的街中牌后付钱。`);
-      }else if(!tex.wet&&!river)why.push('干燥牌面可以偶尔过牌慢打，平衡你的过牌范围。');}
-    else if(eq>=vT){kind='thin';o={bet:.6,check:.4};why.push('牌力领先但不算坚果，以薄价值下注为主，也可以过牌控池。');}
+        why.push(tx(`你的牌几乎是坚果，而牌面干燥，对手很难在后面的牌反超你，给他一张免费牌的风险很小。${bl}所以可以经常过牌慢打：让他诈唬，或者在后面的街中牌后付钱。`,`You have nearly the nuts on a dry board: your opponent rarely outdraws you, so a free card costs little. ${bl}So you can often check to slowplay: let him bluff, or pay you after he improves on a later street.`));
+      }else if(!tex.wet&&!river)why.push(tx('干燥牌面可以偶尔过牌慢打，平衡你的过牌范围。','On a dry board you can occasionally check to slowplay, which protects your checking range.'));}
+    else if(eq>=vT){kind='thin';o={bet:.6,check:.4};why.push(tx('牌力领先但不算坚果，以薄价值下注为主，也可以过牌控池。','Ahead but not the nuts: mostly a thin value bet, checking to control the pot is also fine.'));}
     else if(eq>=vT-0.18){
-      if(agg&&street===1&&n===1&&!tex.wet){kind='cbet';o={bet:.55,check:.45};why.push('你是翻前进攻者，干燥牌面你的范围更强，可以小注高频持续下注。');}
-      else{kind='thin';o={check:.8,bet:.2};why.push('中等牌力，有摊牌价值，以过牌控制底池为主。');}
+      if(agg&&street===1&&n===1&&!tex.wet){kind='cbet';o={bet:.55,check:.45};why.push(tx('你是翻前进攻者，干燥牌面你的范围更强，可以小注高频持续下注。','You were the preflop aggressor and your range is stronger on a dry board: c-bet small and often.'));}
+      else{kind='thin';o={check:.8,bet:.2};why.push(tx('中等牌力，有摊牌价值，以过牌控制底池为主。','Medium strength with showdown value: mostly check to control the pot.'));}
     }else{
       const b=cl.b;
-      if(!river&&b==='strongdraw'){kind='semi';o={bet:.7,check:.3};why.push('强听牌适合半诈唬下注：现在能让对手弃牌，被跟注后还有很多补牌。');}
-      else if(!river&&b==='draw'){kind='semi';o={bet:.5,check:.5};why.push('有像样的听牌，半诈唬下注和过牌免费看牌都可以。');}
-      else if(!river&&b==='weakdraw'){kind='bluff';o={check:.7,bet:.3};why.push('只有卡顺这类弱听牌，偶尔诈唬，多数时候过牌。');}
-      else if(agg&&n===1&&street===1&&!tex.wet){kind='cbet';o={bet:.45,check:.55};why.push('牌很弱，但作为翻前进攻者在干燥牌面可以小注做范围性持续下注，对手会弃掉很多牌。');}
-      else if(river&&agg&&n===1){kind='bluff';o={check:.75,bet:.25};why.push('没有摊牌价值，可以拿少部分这样的牌诈唬，其余放弃。');}
-      else{kind='bluff';o=n>=2?{check:1}:{check:.9,bet:.1};why.push(n>=2?'多人底池里弱牌诈唬很难成功，应该过牌。':agg?'你是上一条街的进攻者，但这手牌现在既没中也没有听牌，继续诈唬时被跟注就几乎没有改进机会。以过牌为主，免费看下一张牌。':'牌力弱、也没有主动权，以过牌为主。');}
+      if(!river&&b==='strongdraw'){kind='semi';o={bet:.7,check:.3};why.push(tx('强听牌适合半诈唬下注：现在能让对手弃牌，被跟注后还有很多补牌。','A strong draw is a good semi-bluff: it can make your opponent fold now, and has plenty of outs when called.'));}
+      else if(!river&&b==='draw'){kind='semi';o={bet:.5,check:.5};why.push(tx('有像样的听牌，半诈唬下注和过牌免费看牌都可以。','A decent draw: semi-bluffing and checking for a free card are both fine.'));}
+      else if(!river&&b==='weakdraw'){kind='bluff';o={check:.7,bet:.3};why.push(tx('只有卡顺这类弱听牌，偶尔诈唬，多数时候过牌。','Only a weak draw like a gutshot: bluff occasionally, check most of the time.'));}
+      else if(agg&&n===1&&street===1&&!tex.wet){kind='cbet';o={bet:.45,check:.55};why.push(tx('牌很弱，但作为翻前进攻者在干燥牌面可以小注做范围性持续下注，对手会弃掉很多牌。','A weak hand, but as the preflop aggressor on a dry board you can make a small range c-bet; your opponent folds a lot.'));}
+      else if(river&&agg&&n===1){kind='bluff';o={check:.75,bet:.25};why.push(tx('没有摊牌价值，可以拿少部分这样的牌诈唬，其余放弃。','No showdown value: bluff with a small share of these hands and give up the rest.'));}
+      else{kind='bluff';o=n>=2?{check:1}:{check:.9,bet:.1};why.push(n>=2?tx('多人底池里弱牌诈唬很难成功，应该过牌。','Bluffing a weak hand rarely works multiway: check.'):agg?tx('你是上一条街的进攻者，但这手牌现在既没中也没有听牌，继续诈唬时被跟注就几乎没有改进机会。以过牌为主，免费看下一张牌。','You were the aggressor on the last street, but this hand has neither a pair nor a draw; if a bluff gets called it has almost no way to improve. Mostly check and take the free card.'):tx('牌力弱、也没有主动权，以过牌为主。','A weak hand without the initiative: mostly check.'));}
     }
     const prevAgg=G.aggr[street-1]>=0?P[G.aggr[street-1]]:null;
     if(prevAgg&&prevAgg!==p&&!prevAgg.folded&&!prevAgg.allIn&&order(prevAgg.i)>order(pi)&&G.nb===0){
       const keep=eq>=sT?0.45:0.25;o={bet:(o.bet||0)*keep};o.check=1-o.bet;
-      why.push(`上一条街的进攻者 ${who(prevAgg)} 还在你后面行动。没有主动权时，GTO 通常先过牌给进攻者，很少领先下注（donk）。`);
+      why.push(tx(`上一条街的进攻者 ${who(prevAgg)} 还在你后面行动。没有主动权时，GTO 通常先过牌给进攻者，很少领先下注（donk）。`,`The last street's aggressor, ${who(prevAgg)}, acts after you. Without the initiative GTO usually checks to the aggressor and rarely leads (donk-bets).`));
     }
     // bluffs and semi-bluffs need everyone to fold: rarer with more opponents, and never as a big all-in into a crowd
     if((kind==='bluff'||kind==='semi')&&n>=2){const keep=kind==='semi'?(n===2?0.6:0.3):(n===2?0.35:0);o={bet:(o.bet||0)*keep};o.check=1-o.bet;
-      why.push(`这是 ${n+1} 人底池，${kind==='semi'?'半诈唬':'诈唬'}要让所有人都弃牌才成功，所以比单挑时少下注${keep===0?'，这里直接过牌':''}。`);}
+      why.push(tx(`这是 ${n+1} 人底池，${kind==='semi'?'半诈唬':'诈唬'}要让所有人都弃牌才成功，所以比单挑时少下注${keep===0?'，这里直接过牌':''}。`,`This is a ${n+1}-way pot: a ${kind==='semi'?'semi-bluff':'bluff'} only works if everyone folds, so bet less often than heads-up${keep===0?'; here, just check':''}.`));}
     const vDist=kind==='value'&&n===1?rangeDist(opps[0],p.hole.concat(B),p.hole):null;
     size=chooseSize(kind,{pot,eff,street,river,n,tex,eq,spr,max,pot3:G.raiseLevel>=2,dist:vDist});
     if(size.vp&&eq<0.9){
       const ev=size.vp.bestEv,d=vDist,better=d.ahead||0;
-      if(ev<0.04){o={bet:.15,check:.85};why.length=0;why.push(`你的牌不弱，但他会跟注的牌里，比你好的（约 ${pc(better)}）和比你差的差不多多，下注几乎赚不到钱。以过牌为主，用摊牌价值赢下他更差的牌。`);}
-      else if(ev<0.1){o={bet:.5,check:.5};why.length=0;why.push(`你的牌是中等偏强：能赢他的弱牌，但输给他约 ${pc(better)} 比你好的牌。下注只能赚一点点，所以过牌和小注薄价值混合；被加注时通常要弃牌。`);}
+      if(ev<0.04){o={bet:.15,check:.85};why.length=0;why.push(tx(`你的牌不弱，但他会跟注的牌里，比你好的（约 ${pc(better)}）和比你差的差不多多，下注几乎赚不到钱。以过牌为主，用摊牌价值赢下他更差的牌。`,`Your hand is not weak, but among the hands that would call, those that beat you (about ${pc(better)}) are about as many as those you beat, so betting earns almost nothing. Mostly check and win at showdown against his worse hands.`));}
+      else if(ev<0.1){o={bet:.5,check:.5};why.length=0;why.push(tx(`你的牌是中等偏强：能赢他的弱牌，但输给他约 ${pc(better)} 比你好的牌。下注只能赚一点点，所以过牌和小注薄价值混合；被加注时通常要弃牌。`,`Your hand is fairly strong: it beats his weak hands but loses to the roughly ${pc(better)} that are better. Betting earns only a little, so mix checking with a small thin value bet; if raised, you usually fold.`));}
     }
     if((kind==='bluff'||kind==='semi')&&size.allin&&n>=2){o={bet:(o.bet||0)*0.3};o.check=1-o.bet;}
     const to=size.to;
-    opts=[{t:'check',f:o.check||0,label:'过牌'}];
-    if(others)opts.push({t:'bet',f:o.bet||0,to,label:to===max?`全下 ${fmt(to)}`:`下注 ${fmt(to)}（${Math.round(to/pot*100)}% 底池）`});
+    opts=[{t:'check',f:o.check||0,label:tx('过牌','Check')}];
+    if(others)opts.push({t:'bet',f:o.bet||0,to,pct:Math.round(to/pot*100),label:to===max?tx(`全下 ${fmt(to)}`,`All-in ${fmt(to)}`):tx(`下注 ${fmt(to)}（${Math.round(to/pot*100)}% 底池）`,`Bet ${fmt(to)} (${Math.round(to/pot*100)}% pot)`)});
     else opts[0].f=1;
   }else{
     potOdds=toCall/(pot+toCall);mdf=Math.max(0,(pot-toCall)/pot);
     const facingRaise=G.aggr[street]>=0&&p.bet>0; // you bet and got raised
     const betFrac=toCall/Math.max(1,pot-toCall);
     // hands that rarely improve realise less when more betting is likely to follow; top pair and overpairs are exempt
-    const oneWay=!river&&(cl.b==='medium'||cl.b==='weak'||cl.b==='air')&&!/顶对|超对/.test(cl.d)&&spr>2;
+    const oneWay=!river&&(cl.b==='medium'||cl.b==='weak'||cl.b==='air')&&!cl.top&&spr>2;
     const disc=!oneWay?1:facingRaise?(cl.b==='air'?0.6:0.75):betFrac>=0.9?0.78:betFrac>=0.5?0.88:0.95;
     const Rf=(ip?1:0.92)*(n>=2?0.95:1)*disc;
     const drawy=!river&&(cl.b==='draw'||cl.b==='strongdraw'||cl.b==='weakdraw');
@@ -886,38 +910,38 @@ function advisePost(pi,iters,detail){
     // or a dominated pair, and is more likely to lose a big pot to a better straight or flush)
     const implied=drawy&&spr>3&&(cl.b!=='weakdraw'||n===1);
     const effEq=eq*Rf+(implied?(cl.b==='weakdraw'?0.035:0.05):0);
-    const eqT=Math.abs(effEq-eq)>0.02?`胜率 ${pc(eq)}（按能兑现的程度折算后约 ${pc(effEq)}）`:`胜率 ${pc(eq)}`;
+    const eqT=Math.abs(effEq-eq)>0.02?tx(`胜率 ${pc(eq)}（按能兑现的程度折算后约 ${pc(effEq)}）`,`Equity ${pc(eq)} (about ${pc(effEq)} after adjusting for how much you can realise)`):tx(`胜率 ${pc(eq)}`,`Equity ${pc(eq)}`);
     const overbet=betFrac>=0.9;
     const rT=(n===1?(river?0.8:0.72):n===2?0.58:0.48)+(overbet?0.1:0);
     const canRaise=p.stack>toCall&&others;
-    if(effEq>=rT&&canRaise){o={raise:.65,call:.35};why.push('对估计范围的胜率很高，加注拿价值，同时保护手牌。');}
-    else if(overbet&&effEq>=rT-0.12&&canRaise){o={call:.85,raise:.15};why.push(`对手下了 ${Math.round(betFrac*100)}% 底池的大注。大注的范围是两极化的：很强的牌加上听牌和诈唬，中等牌很少。你加注时，他的强牌和听牌都会继续，弱牌本来就不在他的范围里；跟注能保留他的诈唬，你又有${ip?'位置':'足够的胜率'}，所以以跟注为主。`);}
+    if(effEq>=rT&&canRaise){o={raise:.65,call:.35};why.push(tx('对估计范围的胜率很高，加注拿价值，同时保护手牌。','High equity against the estimated range: raise for value and to protect your hand.'));}
+    else if(overbet&&effEq>=rT-0.12&&canRaise){o={call:.85,raise:.15};why.push(tx(`对手下了 ${Math.round(betFrac*100)}% 底池的大注。大注的范围是两极化的：很强的牌加上听牌和诈唬，中等牌很少。你加注时，他的强牌和听牌都会继续，弱牌本来就不在他的范围里；跟注能保留他的诈唬，你又有${ip?'位置':'足够的胜率'}，所以以跟注为主。`,`Your opponent bet a big ${Math.round(betFrac*100)}% of the pot. A big bet is polarised: very strong hands plus draws and bluffs, few medium hands. If you raise, his strong hands and draws continue and his weak hands were never in this range; calling keeps his bluffs in, and you have ${ip?'position':'enough equity'}, so mostly call.`));}
     // margins scale with the price: facing a small bet a modest edge is enough, facing a big bet a larger one is needed
     else if(effEq>=potOdds+Math.max(0.025,potOdds*0.2)){
-      if(!river&&cl.b==='strongdraw'&&canRaise){o={call:.7,raise:.3};why.push('强听牌可以偶尔半诈唬加注。');}else o={call:1};
-      why.push(`${eqT}明显高于跟注所需的 ${pc(potOdds)}，跟注长期赚钱。`);
+      if(!river&&cl.b==='strongdraw'&&canRaise){o={call:.7,raise:.3};why.push(tx('强听牌可以偶尔半诈唬加注。','A strong draw can sometimes semi-bluff raise.'));}else o={call:1};
+      why.push(tx(`${eqT}明显高于跟注所需的 ${pc(potOdds)}，跟注长期赚钱。`,`${eqT} is clearly above the ${pc(potOdds)} needed to call: calling wins in the long run.`));
     }else{
       // between "clearly fold" and "clearly call" the frequencies blend smoothly instead of jumping
       const hi=potOdds+Math.max(0.025,potOdds*0.2),lo=potOdds-Math.max(0.04,potOdds*0.15);
-      if(effEq>=lo){const c=0.15+0.7*Math.min(1,(effEq-lo)/(hi-lo));o={call:c,fold:1-c};why.push(`${eqT}和所需的 ${pc(potOdds)} 很接近，属于边缘牌，跟注和弃牌混合。`);}
-      else if(effEq>=lo-0.06){o={call:.1,fold:.9};why.push(`${eqT}低于跟注所需的 ${pc(potOdds)}，以弃牌为主；差得不多，偶尔跟注也说得过去。`);}
-      else{o={fold:1};why.push(`${eqT}低于跟注所需的 ${pc(potOdds)}，长期跟注会亏。`);}
+      if(effEq>=lo){const c=0.15+0.7*Math.min(1,(effEq-lo)/(hi-lo));o={call:c,fold:1-c};why.push(tx(`${eqT}和所需的 ${pc(potOdds)} 很接近，属于边缘牌，跟注和弃牌混合。`,`${eqT} is close to the ${pc(potOdds)} needed: a borderline hand, mix calls and folds.`));}
+      else if(effEq>=lo-0.06){o={call:.1,fold:.9};why.push(tx(`${eqT}低于跟注所需的 ${pc(potOdds)}，以弃牌为主；差得不多，偶尔跟注也说得过去。`,`${eqT} is below the ${pc(potOdds)} needed: mostly fold; it is not far off, so an occasional call is defensible.`));}
+      else{o={fold:1};why.push(tx(`${eqT}低于跟注所需的 ${pc(potOdds)}，长期跟注会亏。`,`${eqT} is below the ${pc(potOdds)} needed: calling loses in the long run.`));}
     }
-    if(implied)why.push('听牌有隐含赔率：中牌后还能赢到后面的下注，所以跟注门槛略低。');
-    else if(drawy&&cl.b==='weakdraw'&&n>=2)why.push(`这是 ${n+1} 人底池，你的卡顺不算隐含赔率：中了常常只是小的那一端顺子或者一对，可能输给更大的顺子或同花，河牌${ip?'':'你还要先行动，'}也很难再从几个人那里多赢钱。`);
-    if(!ip&&n===1)why.push('你没有位置，后面街更难实现胜率，所以门槛稍微提高。');
-    if(oneWay&&disc<0.9)why.push(`你的牌是${cl.d}，${cl.b==='air'?'没有对子也没有听牌，':''}后面很少能改进，而跟注后还剩 SPR ${spr.toFixed(1)}：他${facingRaise?'加注之后，':''}转牌、河牌很可能继续下注，你很难跟到摊牌。名义上的胜率实际兑现不了多少，所以按打折后的胜率来判断。`);
-    why.push(`MDF ${pc(mdf)} 是对你整个范围的要求：整体要继续这么多，对手才不能用任何牌诈唬获利。它不是每手牌的跟注标准，范围里最弱的那部分牌本来就该弃。`);
+    if(implied)why.push(tx('听牌有隐含赔率：中牌后还能赢到后面的下注，所以跟注门槛略低。','A draw has implied odds: when it hits you can win more on later streets, so the bar for calling is slightly lower.'));
+    else if(drawy&&cl.b==='weakdraw'&&n>=2)why.push(tx(`这是 ${n+1} 人底池，你的卡顺不算隐含赔率：中了常常只是小的那一端顺子或者一对，可能输给更大的顺子或同花，河牌${ip?'':'你还要先行动，'}也很难再从几个人那里多赢钱。`,`This is a ${n+1}-way pot, so your gutshot gets no implied odds: when it hits it is often the low end of a straight or just a pair, can lose to a bigger straight or a flush, and${ip?'':' acting first on the river,'} it is hard to win much more from several players.`));
+    if(!ip&&n===1)why.push(tx('你没有位置，后面街更难实现胜率，所以门槛稍微提高。','You are out of position, so realising equity on later streets is harder and the bar goes up a little.'));
+    if(oneWay&&disc<0.9)why.push(tx(`你的牌是${cl.d}，${cl.b==='air'?'没有对子也没有听牌，':''}后面很少能改进，而跟注后还剩 SPR ${spr.toFixed(1)}：他${facingRaise?'加注之后，':''}转牌、河牌很可能继续下注，你很难跟到摊牌。名义上的胜率实际兑现不了多少，所以按打折后的胜率来判断。`,`You have ${cl.d}${cl.b==='air'?', no pair and no draw,':''} which rarely improves, and after calling the SPR is still ${spr.toFixed(1)}: ${facingRaise?'having raised, ':''}he is likely to keep betting on later streets and you will struggle to reach showdown. You realise little of the nominal equity, so the decision uses the discounted figure.`));
+    why.push(tx(`MDF ${pc(mdf)} 是对你整个范围的要求：整体要继续这么多，对手才不能用任何牌诈唬获利。它不是每手牌的跟注标准，范围里最弱的那部分牌本来就该弃。`,`MDF ${pc(mdf)} applies to your whole range: continue that much overall and your opponent cannot profit by bluffing with any two cards. It is not a calling standard for each hand; the weakest part of your range should fold anyway.`));
     let rt=round5(Math.max(G.currentBet*3,G.currentBet+G.minRaise));
     const bigRaise=river&&effEq>=0.9;
     if(bigRaise)rt=round5(Math.max(rt,G.currentBet+0.75*(pot+toCall)));
     if(rt>=0.6*max)rt=max;
-    rsize=bigRaise?[`你几乎是坚果。河牌对手还会跟你加注的，基本都是很强的牌（比如葫芦），这些牌不管你加多少都会跟；更弱的牌加多加少都会弃。所以按底池加注到约 ${fmt(rt)}bb，比固定 3 倍拿到更多。`]
-      :rt===max?['按 3 倍加注之后剩下的筹码已经不多，直接全下：对手要么用整个筹码跟注，要么弃牌，不给他便宜看牌的机会。']
-      :[`加注到对手下注的约 3 倍（${fmt(rt)}bb）。太小（2 倍左右）对手跟注只需要很少的胜率，听牌和弱牌都能便宜地继续；太大则对手的弱牌全部弃掉，只剩强牌继续，你的价值牌反而赢得少。`,
-        river?'河牌加注几乎都是强牌或少量诈唬，3 倍左右让对手面对的价格和价值下注保持一致。':'翻后加注也在为后面的街铺路：3 倍左右让后面的街能自然地把筹码打进去。'];
-    opts=[{t:'fold',f:o.fold||0,label:'弃牌'},{t:'call',f:o.call||0,amt:toCall,label:p.stack<=toCall?`跟注全下 ${fmt(toCall)}`:`跟注 ${fmt(toCall)}`}];
-    if(canRaise)opts.push({t:'raise',f:o.raise||0,to:rt,label:rt===max?`全下 ${fmt(rt)}`:`加注到 ${fmt(rt)}`});
+    rsize=bigRaise?[tx(`你几乎是坚果。河牌对手还会跟你加注的，基本都是很强的牌（比如葫芦），这些牌不管你加多少都会跟；更弱的牌加多加少都会弃。所以按底池加注到约 ${fmt(rt)}bb，比固定 3 倍拿到更多。`,`You have nearly the nuts. On the river the hands that call a raise are mostly very strong (full houses, say), and they call whatever the size; weaker hands fold to any raise. So raise pot-sized, to about ${fmt(rt)}bb, which wins more than a fixed 3x.`)]
+      :rt===max?[tx('按 3 倍加注之后剩下的筹码已经不多，直接全下：对手要么用整个筹码跟注，要么弃牌，不给他便宜看牌的机会。','After a 3x raise few chips would be left behind, so just go all-in: your opponent calls off his stack or folds, with no cheap look at the next card.')]
+      :[tx(`加注到对手下注的约 3 倍（${fmt(rt)}bb）。太小（2 倍左右）对手跟注只需要很少的胜率，听牌和弱牌都能便宜地继续；太大则对手的弱牌全部弃掉，只剩强牌继续，你的价值牌反而赢得少。`,`Raise to about 3x the bet (${fmt(rt)}bb). Too small (around 2x) and he needs very little equity to call, so draws and weak hands continue cheaply; too big and all his weak hands fold, only strong ones continue, and your value hands win less.`),
+        river?tx('河牌加注几乎都是强牌或少量诈唬，3 倍左右让对手面对的价格和价值下注保持一致。','River raises are almost all strong hands plus a few bluffs; about 3x keeps the price he faces in line with a value bet.'):tx('翻后加注也在为后面的街铺路：3 倍左右让后面的街能自然地把筹码打进去。','A postflop raise also sets up later streets: about 3x lets the stacks go in naturally over the remaining streets.')];
+    opts=[{t:'fold',f:o.fold||0,label:tx('弃牌','Fold')},{t:'call',f:o.call||0,amt:toCall,label:p.stack<=toCall?tx(`跟注全下 ${fmt(toCall)}`,`Call all-in ${fmt(toCall)}`):tx(`跟注 ${fmt(toCall)}`,`Call ${fmt(toCall)}`)}];
+    if(canRaise)opts.push({t:'raise',f:o.raise||0,to:rt,label:rt===max?tx(`全下 ${fmt(rt)}`,`All-in ${fmt(rt)}`):tx(`加注到 ${fmt(rt)}`,`Raise to ${fmt(rt)}`)});
     else{opts[1].f+=(o.raise||0);}
   }
   const s=opts.reduce((a,x)=>a+x.f,0)||1;opts.forEach(x=>x.f/=s);
@@ -927,7 +951,8 @@ function advisePost(pi,iters,detail){
     const bettor=G.aggr[street]>=0&&G.aggr[street]!==pi?P[G.aggr[street]]:null;
     const main=bettor&&!bettor.folded?bettor:(opps.find(q=>q.i===G.aggr[street-1])||opps[0]);
     res.mainOpp=main;res.oppNames=opps.map(q=>who(q));res.dist=rangeDist(main,p.hole.concat(B));res.hint=styleHint(main);
-    res.sit=`${STREET_CN[street]} · ${n+1} 人底池 · ${toCall>0?`${who(bettor||main)} ${G.nb>1?'加注到':'下注'} ${fmt(G.currentBet)}bb，你需要跟 ${fmt(toCall)}bb`:'目前无人下注'} · ${ip?'你有位置':'你没有位置'}`;
+    res.sit=tx(`${STREET_CN[street]} · ${n+1} 人底池 · ${toCall>0?`${who(bettor||main)} ${G.nb>1?'加注到':'下注'} ${fmt(G.currentBet)}bb，你需要跟 ${fmt(toCall)}bb`:'目前无人下注'} · ${ip?'你有位置':'你没有位置'}`,
+      `${STREET_EN[street]} · ${n+1}-way pot · ${toCall>0?`${who(bettor||main)} ${G.nb>1?'raised to':'bet'} ${fmt(G.currentBet)}bb, you need to call ${fmt(toCall)}bb`:'no bet yet'} · ${ip?'in position':'out of position'}`);
   }
   return res;
 }
@@ -953,18 +978,18 @@ function cbetPlan(p,B,tex,eq,vT,cl,ip){
   let base=pot3?(tex.wet?0.6:0.85):(tex.wet?0.45:(high?0.75:0.55));
   if(!ip)base*=0.85;
   const why=[];
-  if(pot3)why.push(`这是 3bet 底池，你是翻前最后加注的人。你的范围里有很多超对和 AK，对手跟注 3bet 的范围主要是中对子和同花高张${low?'；在这种低牌面上，超对大多在你手里，对手很难中到强牌':''}。所以 GTO ${tex.wet?'仍然经常':'几乎用整个范围'}持续下注。`);
-  else if(tex.wet)why.push('你是翻前加注者，但湿润牌面上对手的跟注范围连得更好，持续下注频率要降低。');
-  else if(high)why.push('你是翻前加注者，这种有大牌的干燥牌面对你的范围更有利（AK、AQ、大对子更多），可以小注高频持续下注。');
-  else why.push('你是翻前加注者，干燥牌面仍然偏向你的范围，但低牌对跟注方也不差，持续下注频率中等。');
+  if(pot3)why.push(tx(`这是 3bet 底池，你是翻前最后加注的人。你的范围里有很多超对和 AK，对手跟注 3bet 的范围主要是中对子和同花高张${low?'；在这种低牌面上，超对大多在你手里，对手很难中到强牌':''}。所以 GTO ${tex.wet?'仍然经常':'几乎用整个范围'}持续下注。`,`This is a 3-bet pot and you made the last raise preflop. Your range has many overpairs and AK, while his range for calling a 3-bet is mostly middle pairs and suited broadways${low?'; on a low board like this the overpairs are mostly yours and he rarely has a strong hand':''}. So GTO ${tex.wet?'still c-bets often':'c-bets almost its whole range'}.`));
+  else if(tex.wet)why.push(tx('你是翻前加注者，但湿润牌面上对手的跟注范围连得更好，持续下注频率要降低。','You raised preflop, but on a wet board the caller\'s range connects better, so c-bet less often.'));
+  else if(high)why.push(tx('你是翻前加注者，这种有大牌的干燥牌面对你的范围更有利（AK、AQ、大对子更多），可以小注高频持续下注。','You raised preflop, and a dry board with high cards favours your range (more AK, AQ and big pairs): c-bet small and often.'));
+  else why.push(tx('你是翻前加注者，干燥牌面仍然偏向你的范围，但低牌对跟注方也不差，持续下注频率中等。','You raised preflop; a dry board still favours your range, but low cards are fine for the caller too, so c-bet at a medium frequency.'));
   const r1=p.hole[0]>>2,r2=p.hole[1]>>2,over=Math.min(r1,r2)>hiB,aceOver=Math.max(r1,r2)===12&&12>hiB;
   let bdf=false;for(let s=0;s<4;s++){const hs=((p.hole[0]&3)===s?1:0)+((p.hole[1]&3)===s?1:0);let bs=0;for(const c of B)if((c&3)===s)bs++;if(hs>=1&&hs+bs===3)bdf=true;}
   const b=cl.b;let f;
-  if(b==='strongdraw'||b==='draw'){f=Math.min(0.9,base+0.15);why.push('你有听牌：现在下注能让对手弃牌，被跟注后还有补牌。');}
-  else if(eq>=vT||b==='good'||b==='medium'){f=Math.min(0.9,base*0.8);why.push('你的牌有一定价值：一部分下注拿薄价值、保护手牌，一部分过牌控制底池。');}
-  else if(b==='weak'){f=base*0.6;why.push('弱对子有一点摊牌价值，下注频率比空气低一些。');}
-  else if(over||bdf||aceOver){f=base;const bits=[];if(over)bits.push('两张高张，转牌河牌中了就是顶对');else if(aceOver)bits.push('有一张 A，转牌河牌中 A 就是顶对');if(bdf)bits.push('还有后门同花听牌');why.push(`这手牌${bits.join('，')}，是很好的持续下注诈唬牌：被跟注后还有改进机会。`);}
-  else{f=base*0.55;why.push('完全没有后门听牌的空气，下注频率低一些，留一部分在过牌里。');}
+  if(b==='strongdraw'||b==='draw'){f=Math.min(0.9,base+0.15);why.push(tx('你有听牌：现在下注能让对手弃牌，被跟注后还有补牌。','You have a draw: betting now can make your opponent fold, and you still have outs when called.'));}
+  else if(eq>=vT||b==='good'||b==='medium'){f=Math.min(0.9,base*0.8);why.push(tx('你的牌有一定价值：一部分下注拿薄价值、保护手牌，一部分过牌控制底池。','Your hand has some value: bet part of the time for thin value and protection, check the rest to control the pot.'));}
+  else if(b==='weak'){f=base*0.6;why.push(tx('弱对子有一点摊牌价值，下注频率比空气低一些。','A weak pair has a little showdown value, so bet a bit less often than with air.'));}
+  else if(over||bdf||aceOver){f=base;const bits=[];if(over)bits.push(tx('两张高张，转牌河牌中了就是顶对','has two overcards that make top pair if they hit'));else if(aceOver)bits.push(tx('有一张 A，转牌河牌中 A 就是顶对','has an ace that makes top pair if it hits'));if(bdf)bits.push(tx('还有后门同花听牌','also has a backdoor flush draw'));why.push(tx(`这手牌${bits.join('，')}，是很好的持续下注诈唬牌：被跟注后还有改进机会。`,`This hand ${bits.join(', and ')}: a good c-bet bluff, since it can still improve when called.`));}
+  else{f=base*0.55;why.push(tx('完全没有后门听牌的空气，下注频率低一些，留一部分在过牌里。','Pure air without backdoor draws: bet less often and keep some of these in your checking range.'));}
   return{o:{bet:f,check:1-f},why};
 }
 
@@ -1013,17 +1038,17 @@ function valueSizePlan(c){
   let best=evs.reduce((a,b)=>b.ev>a.ev?b:a);
   const R=[],L=4-c.street;
   const cont=(d.strong||0)+(d.good||0),mid=(d.medium||0)+(d.weak||0);
-  if(d.ahead!=null)R.push(`和你的牌直接比大小：他的估计范围里比你好的约 ${pc(d.ahead)}${d.tie>=0.01?`，和你平分的约 ${pc(d.tie)}`:''}，其余都比你差。`);
-  R.push(`${d.ahead!=null?'比你差的部分：':'对手估计范围：'}强牌（两对+）${pc(d.strong||0)}、好牌 ${pc(d.good||0)}、中等成牌 ${pc(d.medium||0)}、弱对 ${pc(d.weak||0)}、听牌 ${pc(d.draw||0)}、空气 ${pc(d.air||0)}。`);
-  if(mid>cont+0.2)R.push(`他的范围以中等成牌和弱对子为主，这些牌${L>1?'愿意跟一两次小注，但面对大注或者连续几条街的下注就会弃牌':'面对大注会弃牌'}。所以用 ${Math.round(best.s*100)}% 左右的${best.s<=0.5?'小':'中等'}尺度，${L>1?'让它们在几条街都继续付钱':'让更多这样的牌跟注'}，总共赢得最多。`);
-  else if(cont>=0.35)R.push(`他的范围里有不少好牌和强牌，这些牌面对大注也会跟，所以可以用 ${Math.round(best.s*100)}% 这样较大的尺度${L>1?'，几条街下来把更多筹码打进去':''}。`);
-  else R.push(`综合他范围里各类牌愿意跟注的程度，${Math.round(best.s*100)}% 左右能赢得最多。`);
-  if(c.tex.wet&&c.street<3&&(d.draw||0)>=0.15&&best.s<0.5){best={s:0.5,ev:valueEV(d,0.5,c)};R.push(`不过他的范围里听牌有 ${pc(d.draw)}，至少下 50% 底池，不让听牌便宜地看下一张牌。`);}
+  if(d.ahead!=null)R.push(tx(`和你的牌直接比大小：他的估计范围里比你好的约 ${pc(d.ahead)}${d.tie>=0.01?`，和你平分的约 ${pc(d.tie)}`:''}，其余都比你差。`,`Compared directly with your hand: about ${pc(d.ahead)} of his estimated range beats you${d.tie>=0.01?`, about ${pc(d.tie)} ties`:''}, and the rest is worse.`));
+  R.push(tx(`${d.ahead!=null?'比你差的部分：':'对手估计范围：'}强牌（两对+）${pc(d.strong||0)}、好牌 ${pc(d.good||0)}、中等成牌 ${pc(d.medium||0)}、弱对 ${pc(d.weak||0)}、听牌 ${pc(d.draw||0)}、空气 ${pc(d.air||0)}。`,`${d.ahead!=null?'The worse part: ':'Opponent\'s estimated range: '}strong (two pair+) ${pc(d.strong||0)}, good ${pc(d.good||0)}, medium made hands ${pc(d.medium||0)}, weak pairs ${pc(d.weak||0)}, draws ${pc(d.draw||0)}, air ${pc(d.air||0)}.`));
+  if(mid>cont+0.2)R.push(tx(`他的范围以中等成牌和弱对子为主，这些牌${L>1?'愿意跟一两次小注，但面对大注或者连续几条街的下注就会弃牌':'面对大注会弃牌'}。所以用 ${Math.round(best.s*100)}% 左右的${best.s<=0.5?'小':'中等'}尺度，${L>1?'让它们在几条街都继续付钱':'让更多这样的牌跟注'}，总共赢得最多。`,`His range is mostly medium made hands and weak pairs, which ${L>1?'will call a small bet once or twice but fold to big bets or to betting on several streets':'fold to a big bet'}. So a ${best.s<=0.5?'small':'medium'} size of about ${Math.round(best.s*100)}% ${L>1?'keeps them paying over several streets':'gets more of them to call'} and wins the most overall.`));
+  else if(cont>=0.35)R.push(tx(`他的范围里有不少好牌和强牌，这些牌面对大注也会跟，所以可以用 ${Math.round(best.s*100)}% 这样较大的尺度${L>1?'，几条街下来把更多筹码打进去':''}。`,`His range has plenty of good and strong hands that call big bets too, so a larger size like ${Math.round(best.s*100)}% works${L>1?', getting more chips in over the streets':''}.`));
+  else R.push(tx(`综合他范围里各类牌愿意跟注的程度，${Math.round(best.s*100)}% 左右能赢得最多。`,`Weighing how willing each part of his range is to call, about ${Math.round(best.s*100)}% wins the most.`));
+  if(c.tex.wet&&c.street<3&&(d.draw||0)>=0.15&&best.s<0.5){best={s:0.5,ev:valueEV(d,0.5,c)};R.push(tx(`不过他的范围里听牌有 ${pc(d.draw)}，至少下 50% 底池，不让听牌便宜地看下一张牌。`,`But ${pc(d.draw)} of his range is draws, so bet at least 50% of the pot and do not let them see the next card cheaply.`));}
   return{f:best.s,R,evs,bestEv:best.ev};
 }
 function blockerNote(hole,B){
   const hi=Math.max(...B.map(c=>c>>2)),onB=B.filter(c=>(c>>2)===hi).length,inH=hole.filter(c=>(c>>2)===hi).length;
-  if(inH>=1&&onB+inH>=3)return `你手里有 ${inH} 张 ${rankCN(hi)}，牌面上有 ${onB} 张，对手最多只剩 ${4-onB-inH} 张 ${rankCN(hi)}，几乎不可能中顶对，能跟你大注的牌很少。`;
+  if(inH>=1&&onB+inH>=3)return tx(`你手里有 ${inH} 张 ${rankCN(hi)}，牌面上有 ${onB} 张，对手最多只剩 ${4-onB-inH} 张 ${rankCN(hi)}，几乎不可能中顶对，能跟你大注的牌很少。`,`You hold ${inH} ${rankCN(hi)}${inH>1?'s':''} and the board has ${onB}, so at most ${4-onB-inH} ${rankCN(hi)} remain for your opponent: he almost never has top pair, and few hands can call a big bet. `);
   return '';
 }
 
@@ -1038,18 +1063,18 @@ function turnPlan(p,B,tex,eq,vT,cl,ip,mode){
   const pot3=G.raiseLevel>=2;
   let base=mode==='delayed'?(ip?0.55:0.45):(ip?0.55:0.45)+(pot3?0.15:0);
   const why=[];
-  if(mode==='delayed')why.push(`翻牌双方都过牌，转牌他又过牌。他连续两次没有下注，范围里大部分是没中的牌；而你是翻前加注者，${ip?'又有位置，':''}重新拿回主动权。这种"延迟持续下注"在 GTO 里频率很高。`);
-  else why.push('你翻牌下注被跟注，他的范围已经去掉了大部分空气，剩下的多是中等牌和听牌。转牌要不要继续下注（第二枪），要看这张牌对谁有利，以及你的牌有没有改进机会。');
-  if(tr>=10&&tr>fHi){base+=0.1;why.push(`转牌 ${rankCN(tr)} 是一张大牌：翻前加注方的范围里带 ${rankCN(tr)} 的强牌更多，这张牌对你的范围更有利。`);}
-  else if(flushNew||connects){base-=(pot3&&!flushNew?0.07:0.15);why.push(`转牌 ${cardTxt(turn)} ${flushNew?'带来了同花听牌':'和牌面连了起来，带来更多顺子和两对'}，对跟注方的范围更有利，下注频率要降低。`);}
+  if(mode==='delayed')why.push(tx(`翻牌双方都过牌，转牌他又过牌。他连续两次没有下注，范围里大部分是没中的牌；而你是翻前加注者，${ip?'又有位置，':''}重新拿回主动权。这种"延迟持续下注"在 GTO 里频率很高。`,`The flop went check-check and he checked the turn again. Having declined to bet twice, his range is mostly misses, while you raised preflop${ip?' and have position':''} and can take the initiative back. GTO makes this "delayed c-bet" often.`));
+  else why.push(tx('你翻牌下注被跟注，他的范围已经去掉了大部分空气，剩下的多是中等牌和听牌。转牌要不要继续下注（第二枪），要看这张牌对谁有利，以及你的牌有没有改进机会。','You bet the flop and got called, so his range has shed most of its air and is mostly medium hands and draws. Whether to fire the turn (a second barrel) depends on whom this card helps and whether your hand can improve.'));
+  if(tr>=10&&tr>fHi){base+=0.1;why.push(tx(`转牌 ${rankCN(tr)} 是一张大牌：翻前加注方的范围里带 ${rankCN(tr)} 的强牌更多，这张牌对你的范围更有利。`,`The ${rankCN(tr)} turn is a high card: the preflop raiser has more strong hands containing a ${rankCN(tr)}, so it favours your range.`));}
+  else if(flushNew||connects){base-=(pot3&&!flushNew?0.07:0.15);why.push(tx(`转牌 ${cardTxt(turn)} ${flushNew?'带来了同花听牌':'和牌面连了起来，带来更多顺子和两对'}，对跟注方的范围更有利，下注频率要降低。`,`The ${cardTxt(turn)} turn ${flushNew?'brings a flush draw':'connects with the board, bringing more straights and two pairs'}; it favours the caller\'s range, so bet less often.`));}
   const r1=p.hole[0]>>2,r2=p.hole[1]>>2,hiB=Math.max(...B.map(c=>c>>2)),over=Math.min(r1,r2)>hiB,aceOver=Math.max(r1,r2)===12&&12>hiB;
   const b=cl.b;let f;
-  if(b==='strongdraw'||b==='draw'){f=Math.min(0.85,base+0.15);why.push('你有听牌：下注能让他弃牌，被跟注后河牌还有补牌。');}
-  else if(eq>=vT||b==='good'||b==='medium'){f=base*(mode==='delayed'?0.85:0.65);why.push(mode==='delayed'?'你的牌有一定价值：下注能从他更差的牌里拿薄价值，也能保护手牌。':'你的牌有一定摊牌价值，不一定要继续下注：一部分下注拿价值，一部分过牌控制底池。');}
-  else if(b==='weak'){f=base*0.5;why.push('弱对子有一点摊牌价值，下注频率低一些。');}
-  else if(mode==='delayed'&&aceOver&&b!=='weakdraw'){f=base*0.35;why.push('这手牌有一张 A：没中也常常是最好的牌（他连续过牌的范围里有很多更差的高牌）。A 高有摊牌价值，更适合过牌摊牌，诈唬应该用完全没有摊牌价值的牌。');}
-  else if(b==='weakdraw'||over||aceOver){f=base*(mode==='delayed'?1:0.75);why.push(`这手牌${b==='weakdraw'?'有卡顺听牌':over?'两张都是高张':'有一张 A'}，被跟注后河牌还有改进机会，适合作为诈唬下注。`);}
-  else{f=base*(mode==='delayed'?0.6:0.35);why.push(mode==='delayed'?'完全没有改进机会的空气，下注频率低一些。':'没有听牌、也没有高张，被跟注后几乎没有改进机会，以过牌为主。');}
+  if(b==='strongdraw'||b==='draw'){f=Math.min(0.85,base+0.15);why.push(tx('你有听牌：下注能让他弃牌，被跟注后河牌还有补牌。','You have a draw: betting can make him fold, and you still have outs on the river when called.'));}
+  else if(eq>=vT||b==='good'||b==='medium'){f=base*(mode==='delayed'?0.85:0.65);why.push(mode==='delayed'?tx('你的牌有一定价值：下注能从他更差的牌里拿薄价值，也能保护手牌。','Your hand has some value: betting gets thin value from his worse hands and protects your hand.'):tx('你的牌有一定摊牌价值，不一定要继续下注：一部分下注拿价值，一部分过牌控制底池。','Your hand has some showdown value and need not keep betting: bet part of the time for value and check the rest to control the pot.'));}
+  else if(b==='weak'){f=base*0.5;why.push(tx('弱对子有一点摊牌价值，下注频率低一些。','A weak pair has a little showdown value, so bet less often.'));}
+  else if(mode==='delayed'&&aceOver&&b!=='weakdraw'){f=base*0.35;why.push(tx('这手牌有一张 A：没中也常常是最好的牌（他连续过牌的范围里有很多更差的高牌）。A 高有摊牌价值，更适合过牌摊牌，诈唬应该用完全没有摊牌价值的牌。','This hand has an ace: even unimproved it is often best (his double-check range has many worse high cards). Ace-high has showdown value and prefers to check to showdown; bluff with hands that have no showdown value at all.'));}
+  else if(b==='weakdraw'||over||aceOver){f=base*(mode==='delayed'?1:0.75);why.push(tx(`这手牌${b==='weakdraw'?'有卡顺听牌':over?'两张都是高张':'有一张 A'}，被跟注后河牌还有改进机会，适合作为诈唬下注。`,`This hand ${b==='weakdraw'?'has a gutshot':over?'has two overcards':'has an ace'} and can still improve on the river when called: a good bluff.`));}
+  else{f=base*(mode==='delayed'?0.6:0.35);why.push(mode==='delayed'?tx('完全没有改进机会的空气，下注频率低一些。','Air with no way to improve: bet less often.'):tx('没有听牌、也没有高张，被跟注后几乎没有改进机会，以过牌为主。','No draw and no overcards, almost no way to improve when called: mostly check.'));}
   f=Math.max(0,Math.min(0.9,f));
   return{o:{bet:f,check:1-f},why};
 }
@@ -1062,47 +1087,61 @@ function chooseSize(kind,c){
   if(kind==='value'&&c.n===1&&c.dist){
     const vp=valueSizePlan(c);f=vp.f;R.push(...vp.R);c.vp=vp;
     const bt=c.dist.ahead!=null?c.dist.ahead:(c.eq<0.9?c.dist.strong||0:0);
-    if(bt>=0.1)R.push(`注意他有约 ${pc(bt)} 的牌比你好，这些牌会跟注甚至加注；下得越大，被更好的牌跟注的损失越大，所以尺度要克制。`);
+    if(bt>=0.1)R.push(tx(`注意他有约 ${pc(bt)} 的牌比你好，这些牌会跟注甚至加注；下得越大，被更好的牌跟注的损失越大，所以尺度要克制。`,`Note that about ${pc(bt)} of his hands beat you; they call or even raise, and the bigger you bet the more you lose to them, so keep the size restrained.`));
   }else if(c.river){
     if(kind==='value'){
-      f=0.75;R.push('河牌之后没有牌要发，你的下注范围是两极化的：要么是强牌，要么是诈唬。用大尺度，强牌能从对手的抓诈牌里拿到最多。');
-      if(c.eq>=0.85){f=1;R.push('你的牌接近坚果，几乎不怕被更好的牌跟注，所以可以下满池。对手的强牌在河牌大多还是会跟。');}
-    }else if(kind==='thin'){f=0.33;R.push('这是河牌的薄价值：比你好的牌会跟，比你差的牌只有一部分会跟。小注能让对手更多较差的牌（弱对子、A 高）跟注；下大了，基本只有比你好的牌才跟。');}
-    else{f=0.75;R.push('河牌诈唬要和价值下注用同一个尺度，否则对手能从尺度看出你在诈唬。');R.push('75% 底池时，你的诈唬只要对手弃牌超过 43% 就不亏；按 GTO 比例，你的下注范围里大约 30% 可以是诈唬。');}
+      f=0.75;R.push(tx('河牌之后没有牌要发，你的下注范围是两极化的：要么是强牌，要么是诈唬。用大尺度，强牌能从对手的抓诈牌里拿到最多。','No more cards come after the river, so your betting range is polarised: strong hands or bluffs. Bet big so your strong hands get the most from his bluff-catchers.'));
+      if(c.eq>=0.85){f=1;R.push(tx('你的牌接近坚果，几乎不怕被更好的牌跟注，所以可以下满池。对手的强牌在河牌大多还是会跟。','Your hand is close to the nuts and barely fears a better hand calling, so bet the pot. His strong hands mostly still call on the river.'));}
+    }else if(kind==='thin'){f=0.33;R.push(tx('这是河牌的薄价值：比你好的牌会跟，比你差的牌只有一部分会跟。小注能让对手更多较差的牌（弱对子、A 高）跟注；下大了，基本只有比你好的牌才跟。','This is a thin river value bet: better hands call, and only some worse hands do. A small bet gets more worse hands (weak pairs, ace-high) to call; bet big and basically only better hands call.'));}
+    else{f=0.75;R.push(tx('河牌诈唬要和价值下注用同一个尺度，否则对手能从尺度看出你在诈唬。','River bluffs must use the same size as value bets, or your opponent can read the bluff from the size.'));R.push(tx('75% 底池时，你的诈唬只要对手弃牌超过 43% 就不亏；按 GTO 比例，你的下注范围里大约 30% 可以是诈唬。','At 75% pot a bluff breaks even if he folds more than 43% of the time; by GTO ratios about 30% of your betting range can be bluffs.'));}
   }else if(kind==='cbet'){
-    if(c.tex.wet){f=0.5;R.push('湿润牌面上对手的范围连得更好，持续下注的频率要降低；下注时用 50% 左右，让听牌跟注付出代价。');}
-    else if(c.pot3){f=0.25;R.push('3bet 底池里底池已经很大，剩余筹码相对少（SPR 低）。持续下注用 25% 左右就够了：对手的空气和小对子面对任何尺度都难继续，小注让你几乎整个范围都能下，成本也低。');}
-    else{f=0.33;R.push('翻前你是加注者，在干燥牌面上你的范围比对手强：超对和高张更多，对手大部分牌完全没中。');
-      R.push('这种局面 GTO 用小注、高频率下注：33% 底池就能逼对手弃掉大量空气，诈唬只要对手弃牌超过 25% 就不亏，而且你几乎可以用整个范围下注。');}
+    if(c.tex.wet){f=0.5;R.push(tx('湿润牌面上对手的范围连得更好，持续下注的频率要降低；下注时用 50% 左右，让听牌跟注付出代价。','On a wet board his range connects better, so c-bet less often; when you bet, use about 50% so draws pay to call.'));}
+    else if(c.pot3){f=0.25;R.push(tx('3bet 底池里底池已经很大，剩余筹码相对少（SPR 低）。持续下注用 25% 左右就够了：对手的空气和小对子面对任何尺度都难继续，小注让你几乎整个范围都能下，成本也低。','In a 3-bet pot the pot is already big and the stacks behind relatively small (low SPR). About 25% is enough for a c-bet: his air and small pairs struggle to continue against any size, and a small bet lets you bet almost your whole range cheaply.'));}
+    else{f=0.33;R.push(tx('翻前你是加注者，在干燥牌面上你的范围比对手强：超对和高张更多，对手大部分牌完全没中。','You raised preflop, and on a dry board your range is stronger: more overpairs and high cards, while most of his hands missed completely.'));
+      R.push(tx('这种局面 GTO 用小注、高频率下注：33% 底池就能逼对手弃掉大量空气，诈唬只要对手弃牌超过 25% 就不亏，而且你几乎可以用整个范围下注。','Here GTO bets small and often: 33% of the pot forces a lot of air to fold, a bluff breaks even if he folds more than 25%, and you can bet almost your whole range.'));}
   }else if(kind==='value'&&c.n>=2){
     f=c.tex.wet?0.5:0.33;
-    R.push(`这是 ${c.n+1} 人底池。你的价值来自几个对手各自的跟注，中等偏小的尺度能让更多人用较差的牌继续；而且人多时至少有一人中牌的概率高，下太大容易只被更好的牌跟注。`);
-    if(c.tex.wet)R.push('湿润牌面还要兼顾保护，所以用 50%，而不是 33%：让听牌跟注的价格不那么便宜。');
+    R.push(tx(`这是 ${c.n+1} 人底池。你的价值来自几个对手各自的跟注，中等偏小的尺度能让更多人用较差的牌继续；而且人多时至少有一人中牌的概率高，下太大容易只被更好的牌跟注。`,`This is a ${c.n+1}-way pot. Your value comes from several opponents each calling, and a smallish size lets more of them continue with worse hands; with more players someone is also more likely to have hit, so a big bet tends to get called only by better hands.`));
+    if(c.tex.wet)R.push(tx('湿润牌面还要兼顾保护，所以用 50%，而不是 33%：让听牌跟注的价格不那么便宜。','A wet board also calls for protection, so 50% rather than 33%: draws should not get a cheap price.'));
   }else if(kind==='value'){
-    if(c.tex.wet){f=0.75;R.push('湿润牌面听牌很多。下注 75% 底池时，对手的听牌跟注需要 30% 胜率，而同花听牌或两头顺听牌下一张只有约 17%–20% 的中牌率，听牌就拿不到好价格。');}
-    else{f=0.5;R.push('干燥牌面上，对手的牌很少能靠后面的牌反超，不需要用大注保护。50% 左右能让对手中等的牌（第二对、弱顶对）继续跟注，赢到的价值最多。');}
-    if(geo>f+0.08&&c.eq>=0.75){f=Math.round(Math.min(1.25,geo)*20)/20;R.push(`你的牌很强，目标是到河牌时把筹码全部打进去。还剩 ${left} 条街、SPR ${c.spr.toFixed(1)}，每条街下约 ${Math.round(f*100)}% 底池（几何尺度）正好能做到，不用在最后一条街突然下一个很不自然的大注。`);}
+    if(c.tex.wet){f=0.75;R.push(tx('湿润牌面听牌很多。下注 75% 底池时，对手的听牌跟注需要 30% 胜率，而同花听牌或两头顺听牌下一张只有约 17%–20% 的中牌率，听牌就拿不到好价格。','A wet board has many draws. Against a 75% pot bet a draw needs 30% equity to call, while a flush draw or open-ender hits only about 17%–20% on the next card, so draws do not get a good price.'));}
+    else{f=0.5;R.push(tx('干燥牌面上，对手的牌很少能靠后面的牌反超，不需要用大注保护。50% 左右能让对手中等的牌（第二对、弱顶对）继续跟注，赢到的价值最多。','On a dry board his hands rarely outdraw you, so no big protection bet is needed. About 50% keeps his medium hands (second pair, weak top pair) calling and wins the most.'));}
+    if(geo>f+0.08&&c.eq>=0.75){f=Math.round(Math.min(1.25,geo)*20)/20;R.push(tx(`你的牌很强，目标是到河牌时把筹码全部打进去。还剩 ${left} 条街、SPR ${c.spr.toFixed(1)}，每条街下约 ${Math.round(f*100)}% 底池（几何尺度）正好能做到，不用在最后一条街突然下一个很不自然的大注。`,`Your hand is strong and the goal is to get all the chips in by the river. With ${left} street${left>1?'s':''} left and SPR ${c.spr.toFixed(1)}, betting about ${Math.round(f*100)}% of the pot each street (geometric sizing) does exactly that, without an unnatural huge bet on the last street.`));}
   }else if(kind==='thin'){
-    if(c.tex.wet){f=0.5;R.push('你的牌领先，但湿润牌面上很多后门和听牌能反超你。50% 左右是折中：比小注更能让听牌付出代价，又不会大到只有更强的牌才跟。');}
-    else{f=0.33;R.push('中等牌力的薄价值下注用小注：让对手更差的牌（听牌、更小的对子）继续跟，被加注时损失也小。下大了，对手只会用比你好的牌继续。');}
+    if(c.tex.wet){f=0.5;R.push(tx('你的牌领先，但湿润牌面上很多后门和听牌能反超你。50% 左右是折中：比小注更能让听牌付出代价，又不会大到只有更强的牌才跟。','You are ahead, but on a wet board many draws can outdraw you. About 50% is the compromise: it charges draws more than a small bet without being so big that only stronger hands call.'));}
+    else{f=0.33;R.push(tx('中等牌力的薄价值下注用小注：让对手更差的牌（听牌、更小的对子）继续跟，被加注时损失也小。下大了，对手只会用比你好的牌继续。','A thin value bet with a medium hand uses a small size: worse hands (draws, smaller pairs) keep calling, and you lose little if raised. Bet big and he continues only with better hands.'));}
   }
   else if(kind==='semi'){
-    f=c.tex.wet?0.66:0.5;R.push('半诈唬靠两部分赚钱：对手现在弃牌，或者被跟注后你补中。中等偏大的尺度让对手弃掉更多牌，被跟注时你仍有补牌。');
-    R.push('太小（33%）对手几乎什么牌都会跟，弃牌收益不够；太大（满池以上）一旦被跟、后面没中，损失太多。');
+    f=c.tex.wet?0.66:0.5;R.push(tx('半诈唬靠两部分赚钱：对手现在弃牌，或者被跟注后你补中。中等偏大的尺度让对手弃掉更多牌，被跟注时你仍有补牌。','A semi-bluff wins two ways: he folds now, or you hit after being called. A medium-to-large size gets more folds while you keep your outs when called.'));
+    R.push(tx('太小（33%）对手几乎什么牌都会跟，弃牌收益不够；太大（满池以上）一旦被跟、后面没中，损失太多。','Too small (33%) and he calls with almost anything, so you get too few folds; too big (pot or more) and you lose too much when called and you miss.'));
   }else{
     f=c.tex.wet?0.66:0.33;
-    R.push(c.tex.wet?'湿润牌面上对手有很多听牌和弱成牌，纯诈唬要用中等偏大的尺度才能让它们弃牌。':'干燥牌面上对手没中的牌面对任何尺度都会弃，纯诈唬用小注就够，失败时损失最小。');
+    R.push(c.tex.wet?tx('湿润牌面上对手有很多听牌和弱成牌，纯诈唬要用中等偏大的尺度才能让它们弃牌。','On a wet board he has many draws and weak made hands; a pure bluff needs a medium-to-large size to fold them.'):tx('干燥牌面上对手没中的牌面对任何尺度都会弃，纯诈唬用小注就够，失败时损失最小。','On a dry board his misses fold to any size, so a small bluff is enough and loses the least when it fails.'));
   }
-  if(c.n>=2&&kind!=='value'&&f>0.5){f=0.5;R.length=0;R.push(`这是 ${c.n+1} 人底池，至少有一个对手中牌的概率高，${kind==='semi'?'半诈唬':'诈唬'}让所有人都弃牌很难。所以只用 50% 左右：失败时损失有限，被跟注后${kind==='semi'?'你还有补牌':'也不至于投入太多'}。`);}
-  else if(c.n>=2&&kind!=='value')R.push(`这是 ${c.n+1} 人底池，诈唬让所有人都弃牌更难，所以不会用更大的尺度。`);
+  if(c.n>=2&&kind!=='value'&&f>0.5){f=0.5;R.length=0;R.push(tx(`这是 ${c.n+1} 人底池，至少有一个对手中牌的概率高，${kind==='semi'?'半诈唬':'诈唬'}让所有人都弃牌很难。所以只用 50% 左右：失败时损失有限，被跟注后${kind==='semi'?'你还有补牌':'也不至于投入太多'}。`,`This is a ${c.n+1}-way pot: someone has likely hit, and a ${kind==='semi'?'semi-bluff':'bluff'} rarely folds everyone. So use only about 50%: the loss is limited when it fails, and when called ${kind==='semi'?'you still have outs':'you have not put in too much'}.`));}
+  else if(c.n>=2&&kind!=='value')R.push(tx(`这是 ${c.n+1} 人底池，诈唬让所有人都弃牌更难，所以不会用更大的尺度。`,`This is a ${c.n+1}-way pot: a bluff folding everyone is harder, so no bigger size is used.`));
   let to=Math.max(round5(f*c.pot),BB),allin=false;
-  if(c.spr<1.2&&(kind==='value'||kind==='thin')){to=c.max;allin=true;R.push(`SPR 只有 ${c.spr.toFixed(1)}，剩下的筹码已经比底池还小，有价值时直接全下。`);}
-  else if(to>=0.7*c.max){to=c.max;allin=true;R.push('按这个尺度下注后剩下的筹码已经很少，直接全下更好，不给对手便宜看下一张牌的机会。');}
-  const table=SIZE_LIST.map(x=>({x,need:x/(1+2*x),fold:x/(1+x),verdict:sizeVerdict(kind,x,f,c)}));
-  if(!SIZE_LIST.some(x=>Math.abs(x-f)<0.04))table.push({x:f,need:f/(1+2*f),fold:f/(1+f),verdict:'推荐'}),table.sort((a,b)=>a.x-b.x);
+  if(c.spr<1.2&&(kind==='value'||kind==='thin')){to=c.max;allin=true;R.push(tx(`SPR 只有 ${c.spr.toFixed(1)}，剩下的筹码已经比底池还小，有价值时直接全下。`,`The SPR is only ${c.spr.toFixed(1)}: the stacks behind are smaller than the pot, so with value just go all-in.`));}
+  else if(to>=0.7*c.max){to=c.max;allin=true;R.push(tx('按这个尺度下注后剩下的筹码已经很少，直接全下更好，不给对手便宜看下一张牌的机会。','After a bet of this size few chips would be left behind, so going all-in is better and gives him no cheap look at the next card.'));}
+  const table=SIZE_LIST.map(x=>({x,need:x/(1+2*x),fold:x/(1+x),rec:Math.abs(x-f)<0.04,verdict:sizeVerdict(kind,x,f,c)}));
+  if(!SIZE_LIST.some(x=>Math.abs(x-f)<0.04))table.push({x:f,need:f/(1+2*f),fold:f/(1+f),rec:true,verdict:tx('推荐','Recommended')}),table.sort((a,b)=>a.x-b.x);
   return{f,to,allin,kind,R,table,vp:c.vp||null};
 }
-function sizeVerdict(kind,x,f,c){
+function sizeVerdict(kind,x,f,c){const v=sizeVerdictZh(kind,x,f,c);return LANG==='en'?verdictEN(v):v;}
+function verdictEN(v){
+  const m=v.match(/少赢 (\d+)% 价值/),n=m?m[1]:'';
+  const T={'推荐':'Recommended','略小，也可以':'Slightly small, also fine','略大，也可以':'Slightly big, also fine','偏小':'Too small','偏大：主要只会被更好的牌跟注':'Too big: mostly only better hands call',
+    '偏小：少赢价值':'Too small: wins less value','偏大：主要只会被更好的牌跟注，下注反而亏':'Too big: mostly only better hands call, so the bet loses',
+    '偏小：听牌拿到便宜价格，你也少赢价值':'Too small: draws get a cheap price and you win less value','可选：坚果牌超池也能拿到更多':'Option: with the nuts an overbet can win more',
+    '偏大：中等牌都会弃，主要只剩更强的牌跟':'Too big: medium hands all fold and mostly stronger hands call','偏大：更多中等牌会弃掉':'Too big: more medium hands fold',
+    '偏大：较差的牌不跟了，主要被更好的牌跟注':'Too big: worse hands stop calling and mostly better hands call','偏大：你范围里空气多，大注时对手只用好牌继续，诈唬成本变高':'Too big: your range has a lot of air; against a big bet he continues only with good hands and bluffing costs more',
+    '偏小：对手弃牌不够，半诈唬收益低':'Too small: not enough folds, the semi-bluff earns little','偏大：被跟注后没中，损失太多':'Too big: you lose too much when called and you miss',
+    '偏小：对手跟注太便宜，弃牌不够':'Too small: calling is too cheap for him and he does not fold enough','偏大：需要对手弃得更多才不亏':'Too big: he has to fold more often for it to break even'};
+  if(T[v])return T[v];
+  if(m)return v.startsWith('偏小')?`Too small: wins ${n}% less value`:`Too big: fewer hands call, wins ${n}% less value`;
+  return v;
+}
+function sizeVerdictZh(kind,x,f,c){
   if(Math.abs(x-f)<0.04)return'推荐';
   const small=x<f;
   if(Math.abs(x-f)<=0.12&&!(kind==='cbet'))return small?'略小，也可以':'略大，也可以';
@@ -1127,12 +1166,12 @@ function sizeVerdict(kind,x,f,c){
 }
 function preSizeNote(ctx,p){
   switch(ctx.kind){
-    case 'rfi':return p.pos===7?'开池尺度 3bb：小盲翻后一定没位置，开大一点让大盲跟注更贵。':'开池尺度 2.5bb：九人桌后面还有很多人没行动，小一点的开池在被 3bet 时损失小，同时已经足够让盲注为跟注付出代价。';
-    case 'iso':case 'limpSB':case 'limpBB':return '隔离加注要比正常开池大：大约 3bb，再加上每个溜入者 1bb。否则溜入的人能以很好的价格跟进来，变成多人底池，对你不利。';
-    case 'vsOpen':return (p.pos>=7?'没位置 3bet 约 4 倍：翻后你要先行动，用更大的尺度让对手跟注更贵，更多时候直接弃牌。':'有位置 3bet 约 3 倍：翻后你有位置优势，不需要太大就能让对手为跟注付出代价。')+(G.callers?` 已经有 ${G.callers} 人跟注，每多一个跟注者再加约 1 倍。`:'');
-    case 'vs3o':case 'vs3c':return '4bet 约是 3bet 的 2.2–2.3 倍：100bb 深度下这已经投入了约四分之一的筹码，再大就不如直接全下。';
-    case 'approx':return G.raiseLevel===1?`再加注约是对手加注的 ${ctx.ip?3:4} 倍（${ctx.ip?'有位置':'没位置要更大'}），后面每多一个可能跟进的人再加约 1bb，让他们跟进来的价格变贵。`:'这个深度下再加注基本就要投入大部分筹码。';
-    default:return '这个深度下继续加注就等于全下。';
+    case 'rfi':return p.pos===7?tx('开池尺度 3bb：小盲翻后一定没位置，开大一点让大盲跟注更贵。','Open to 3bb: the small blind is always out of position after the flop, so a bigger open makes the big blind pay more to call.'):tx('开池尺度 2.5bb：九人桌后面还有很多人没行动，小一点的开池在被 3bet 时损失小，同时已经足够让盲注为跟注付出代价。','Open to 2.5bb: at a 9-handed table many players are still to act, so a smaller open loses less when 3-bet while still making the blinds pay to call.');
+    case 'iso':case 'limpSB':case 'limpBB':return tx('隔离加注要比正常开池大：大约 3bb，再加上每个溜入者 1bb。否则溜入的人能以很好的价格跟进来，变成多人底池，对你不利。','An isolation raise is bigger than a normal open: about 3bb plus 1bb per limper. Otherwise the limpers come along at a great price and you end up in a multiway pot, which is bad for you.');
+    case 'vsOpen':return (p.pos>=7?tx('没位置 3bet 约 4 倍：翻后你要先行动，用更大的尺度让对手跟注更贵，更多时候直接弃牌。','Out of position, 3-bet about 4x: you act first after the flop, so a bigger size makes calling more expensive and gets more folds.'):tx('有位置 3bet 约 3 倍：翻后你有位置优势，不需要太大就能让对手为跟注付出代价。','In position, 3-bet about 3x: you have position after the flop, so you do not need a big size to make him pay to call.'))+(G.callers?tx(` 已经有 ${G.callers} 人跟注，每多一个跟注者再加约 1 倍。`,` ${G.callers} player${G.callers>1?'s have':' has'} already called; add about one more open-size per caller.`):'');
+    case 'vs3o':case 'vs3c':return tx('4bet 约是 3bet 的 2.2–2.3 倍：100bb 深度下这已经投入了约四分之一的筹码，再大就不如直接全下。','A 4-bet is about 2.2–2.3x the 3-bet: at 100bb that already commits about a quarter of your stack, and any bigger you might as well shove.');
+    case 'approx':return G.raiseLevel===1?tx(`再加注约是对手加注的 ${ctx.ip?3:4} 倍（${ctx.ip?'有位置':'没位置要更大'}），后面每多一个可能跟进的人再加约 1bb，让他们跟进来的价格变贵。`,`Re-raise to about ${ctx.ip?3:4}x his raise (${ctx.ip?'in position':'bigger out of position'}), plus about 1bb for each player behind who might come along, so joining costs them more.`):tx('这个深度下再加注基本就要投入大部分筹码。','At this depth a re-raise commits most of your stack.');
+    default:return tx('这个深度下继续加注就等于全下。','At this depth any further raise is effectively all-in.');
   }
 }
 
@@ -1157,6 +1196,17 @@ const STYLE_DEF={
     stickB:{good:0.5,medium:0.8,weak:0.75,draw:0.8,strongdraw:0.8,weakdraw:0.5,air:[0.3,0.12,0.03],airA:[0.4,0.2,0.12]},
     hint:'他有一点牌就会一路跟，但完全没中时会放弃。少诈唬（尤其在他可能中了对子的牌面），多价值下注，中等牌也可以下注拿价值；他很少加注，加注时通常是强牌。'}
 };
+// English names / descriptions / hints: the Chinese fields become getters that follow the language
+const STYLE_EN={gto:['GTO','GTO player','Plays an approximate GTO strategy; the hardest to exploit.',''],
+  tag:['TAG','tight-aggressive player (TAG)','Plays few hands but plays them aggressively; usually has it when betting.','He usually has it when he bets or raises. Against his big bets you can fold marginal hands more than GTO; when he checks he is often genuinely weak.'],
+  lag:['LAG','loose-aggressive player (LAG)','Plays many hands, raises and bluffs a lot, and puts you under pressure.','He bluffs a lot. You can bluff-catch a little wider than GTO; with strong hands check and call more and let him put the money in, and bluff him less.'],
+  nit:['Nit','nit (ultra-tight player)','Plays only big hands; his bets and raises are basically always strong.','He only attacks with strong hands. Fold more to his bets and raises (especially medium hands); when he checks or just calls, bet more to steal the pot.'],
+  tp:['Rock','rock (tight-passive player)','Plays few hands and rarely raises; gives up when he misses and gets scared when raised.','He plays few hands, rarely raises, and gives up when he misses. Steal his blinds and c-bet more; but once he raises, or calls several streets, he is usually very strong and medium hands should fold.'],
+  lp:['Station','calling station (loose-passive player)','Wants to see every flop, rarely raises, and calls all the way with any piece.','He calls very wide and almost never bluffs. Value-bet thinner and bigger, basically never bluff him; when he suddenly raises he is usually very strong.'],
+  fish:['Fish','beginner (fish)','Plays many hands, mostly limping and calling; calls with any piece after the flop, rarely raises, gives up when he misses.','He calls all the way with any piece but gives up with nothing. Bluff less (especially on boards where he may have a pair), value-bet more, even with medium hands; he rarely raises, and when he does he is usually strong.']};
+for(const k in STYLE_EN){const s=STYLE_DEF[k],zh={n:s.n,full:s.full,d:s.d,hint:s.hint},en=STYLE_EN[k];
+  ['n','full','d','hint'].forEach((f,i)=>Object.defineProperty(s,f,{get:()=>tx(zh[f],en[i]),enumerable:true}));}
+const PRESET_EN=['All GTO','Home game (many beginners)','Regular table','Tough table'];
 const STYLE_KEYS=['gto','tag','lag','nit','tp','lp','fish'];
 const STYLE_PRESETS=[
   ['全部 GTO',['gto','gto','gto','gto','gto','gto','gto','gto']],
@@ -1210,7 +1260,7 @@ function stylePost(p,st,adv){
   if(get('fold')){
     const F=get('fold'),Cc=get('call'),Rr=get('raise');
     const pot=potTotal(),bf=Cc.amt?Cc.amt/Math.max(1,pot-Cc.amt):0;
-    const sk=stickFor(st,adv.cl.b,G.street,/A 高/.test(adv.cl.d),bf);
+    const sk=stickFor(st,adv.cl.b,G.street,adv.cl.aceHigh,bf);
     if(sk>0)mv(F,Cc,sk*F.f);else if(adv.eq<0.6)mv(Cc,F,-sk*Cc.f);
     if(Rr){if(st.agg>0)mv(Cc,Rr,st.agg*Cc.f*(adv.eq>0.35?1:0.5));else mv(Rr,Cc,-st.agg*Rr.f);}
   }else{
@@ -1249,11 +1299,11 @@ function styleMult(m,t,b,st,aceHigh){
 /* ================= actions ================= */
 function act(pi,t,to){
   const p=P[pi];let txt='';
-  if(t==='fold'){p.folded=true;txt='弃牌';p.lastT='fold';}
-  else if(t==='check'){txt='过牌';p.lastT='call';}
+  if(t==='fold'){p.folded=true;txt=tx('弃牌','Fold');p.lastT='fold';}
+  else if(t==='check'){txt=tx('过牌','Check');p.lastT='call';}
   else if(t==='call'){
     const amt=Math.min(G.currentBet-p.bet,p.stack);put(p,amt);p.lastT='call';
-    txt=p.allIn?`跟注全下 ${fmt(amt)}`:`跟注 ${fmt(amt)}`;
+    txt=p.allIn?tx(`跟注全下 ${fmt(amt)}`,`Call all-in ${fmt(amt)}`):tx(`跟注 ${fmt(amt)}`,`Call ${fmt(amt)}`);
     if(G.street===0){if(G.raiseLevel===0)G.limpers.push(pi);else G.callers++;}
   }else{
     const max=p.stack+p.bet;to=Math.min(Math.max(to,Math.min(G.currentBet+G.minRaise,max)),max);
@@ -1263,10 +1313,10 @@ function act(pi,t,to){
     if(to>G.currentBet){G.currentBet=to;for(const q of P)if(q!==p&&!q.folded&&!q.allIn)q.acted=false;}
     if(G.street===0){if(G.raiseLevel===0)G.isoLimpers=G.limpers.length;G.raiseLevel++;G.raisers.push(pi);G.raiseTo.push(to);G.callersAt.push(G.callers);G.callers=0;}
     G.aggr[G.street]=pi;G.nb++;p.lastT='raise';
-    txt=p.allIn?`全下 ${fmt(to)}`:wasBet?`下注 ${fmt(to)}`:`加注到 ${fmt(to)}`;
+    txt=p.allIn?tx(`全下 ${fmt(to)}`,`All-in ${fmt(to)}`):wasBet?tx(`下注 ${fmt(to)}`,`Bet ${fmt(to)}`):tx(`加注到 ${fmt(to)}`,`Raise to ${fmt(to)}`);
   }
   p.acted=true;p.last=txt;
-  log(`${who(p)}：${txt}`);
+  log(`${who(p)}${tx('：',': ')}${txt}`);
 }
 function pfUpdate(p,adv,t){
   if(t==='fold'||!adv.pre)return;
@@ -1320,7 +1370,7 @@ function endStreet(){
   if(G.street===1){G.deck.pop();G.board.push(G.deck.pop(),G.deck.pop(),G.deck.pop());for(const q of P)if(!q.folded)q.combos=buildCombos(q.pfW,q.isUser);}
   else{G.deck.pop();G.board.push(G.deck.pop());}
   G.nb=0;for(const q of P){q.acted=false;if(!q.folded&&!q.allIn){q.last='';q.lastT='';}}
-  log(`${STREET_CN[G.street]}：${G.board.map(cardTxt).join(' ')} · 底池 ${fmt(potTotal())}bb`,'st');
+  log(tx(`${STREET_CN[G.street]}：${G.board.map(cardTxt).join(' ')} · 底池 ${fmt(potTotal())}bb`,`${STREET_EN[G.street]}: ${G.board.map(cardTxt).join(' ')} · pot ${fmt(potTotal())}bb`),'st');
   const canAct=P.filter(q=>!q.folded&&!q.allIn).length;
   if(canAct<=1){G.toAct=-1;render();G.timer=setTimeout(endStreet,G.fast?0:800);return;}
   G.toAct=nextNeeding(G.button);schedule();
@@ -1341,13 +1391,13 @@ function showdown(){
   for(const q of P){q.stack+=won[q.i];}
   for(const q of alive){q.last=handName(vals[q.i]);q.lastT=won[q.i]>0?'win':'';}
   G.result={won,vals,showdown:true};
-  for(const q of alive)log(`${who(q)} 亮牌 ${q.hole.map(cardTxt).join(' ')} · ${handName(vals[q.i])}${won[q.i]?` · 赢 ${fmt(won[q.i])}bb`:''}`);
+  for(const q of alive)log(tx(`${who(q)} 亮牌 ${q.hole.map(cardTxt).join(' ')} · ${handName(vals[q.i])}${won[q.i]?` · 赢 ${fmt(won[q.i])}bb`:''}`,`${who(q)} shows ${q.hole.map(cardTxt).join(' ')} · ${handName(vals[q.i])}${won[q.i]?` · wins ${fmt(won[q.i])}bb`:''}`));
   finishHand();
 }
 function finishByFold(w){
   const pot=potTotal();w.stack+=pot;const won=new Array(9).fill(0);won[w.i]=pot;
-  G.result={won,showdown:false};w.last=`赢 ${fmt(pot)}`;w.lastT='win';
-  log(`${who(w)} 无人跟注，赢得底池 ${fmt(pot)}bb`);
+  G.result={won,showdown:false};w.last=tx(`赢 ${fmt(pot)}`,`Wins ${fmt(pot)}`);w.lastT='win';
+  log(tx(`${who(w)} 无人跟注，赢得底池 ${fmt(pot)}bb`,`${who(w)} is uncalled and wins the ${fmt(pot)}bb pot`));
   finishHand();
 }
 function handDelta(net){
@@ -1370,7 +1420,7 @@ function finishHand(){
   G.over=true;G.toAct=-1;clearTimeout(G.timer);
   const net=P[0].stack-START;
   recordHand(handDelta(net));
-  log(`本手你${net>0?'赢':net<0?'输':'持平'} ${fmt(Math.abs(net))}bb`);
+  log(tx(`本手你${net>0?'赢':net<0?'输':'持平'} ${fmt(Math.abs(net))}bb`,`This hand you ${net>0?'won':net<0?'lost':'broke even:'} ${fmt(Math.abs(net))}bb`));
   render();
 }
 
@@ -1383,24 +1433,24 @@ function schedule(){
   G.timer=setTimeout(()=>botMove(p.i),G.fast?0:SPEED[SETTINGS.speed]);
 }
 function rate(f){
-  if(f>=0.5)return{lvl:'best',txt:'最佳',score:1};
-  if(f>=0.2)return{lvl:'ok',txt:'可接受（混合策略）',score:0.75};
-  if(f>=0.05)return{lvl:'meh',txt:'偏离',score:0.35};
-  return{lvl:'bad',txt:'错误',score:0};
+  if(f>=0.5)return{lvl:'best',txt:tx('最佳','Best'),score:1};
+  if(f>=0.2)return{lvl:'ok',txt:tx('可接受（混合策略）','Acceptable (mixed strategy)'),score:0.75};
+  if(f>=0.05)return{lvl:'meh',txt:tx('偏离','Deviation'),score:0.35};
+  return{lvl:'bad',txt:tx('错误','Mistake'),score:0};
 }
 function userLabel(t,to){
   const p=P[0];const toCall=Math.min(G.currentBet-p.bet,p.stack),max=p.stack+p.bet;
-  if(t==='fold')return'弃牌';if(t==='check')return'过牌';
-  if(t==='call')return `跟注 ${fmt(toCall)}`;
-  if(to>=max)return `全下 ${fmt(max)}`;
-  return G.currentBet===0?`下注 ${fmt(to)}`:`加注到 ${fmt(to)}`;
+  if(t==='fold')return tx('弃牌','Fold');if(t==='check')return tx('过牌','Check');
+  if(t==='call')return tx(`跟注 ${fmt(toCall)}`,`Call ${fmt(toCall)}`);
+  if(to>=max)return tx(`全下 ${fmt(max)}`,`All-in ${fmt(max)}`);
+  return G.currentBet===0?tx(`下注 ${fmt(to)}`,`Bet ${fmt(to)}`):tx(`加注到 ${fmt(to)}`,`Raise to ${fmt(to)}`);
 }
 function userAct(t,to){
   if(G.over||G.toAct!==0)return;
   const adv=G.cur,opt=adv.opts.find(o=>o.t===t),f=opt?opt.f:0,approx=!!(adv.ctx&&adv.ctx.approx);
-  const rating=approx?{lvl:'na',txt:'近似局面，不计分',score:0}:rate(f);
+  const rating=approx?{lvl:'na',txt:tx('近似局面，不计分','Approximate spot, not scored'),score:0}:rate(f);
   let note='';
-  if((t==='bet'||t==='raise')&&opt&&opt.to&&f>0){const ratio=to/opt.to;if(ratio>1.8||ratio<0.55)note=`尺度偏离：建议约 ${fmt(opt.to)}bb。`;}
+  if((t==='bet'||t==='raise')&&opt&&opt.to&&f>0){const ratio=to/opt.to;if(ratio>1.8||ratio<0.55)note=tx(`尺度偏离：建议约 ${fmt(opt.to)}bb。`,`Size is off: about ${fmt(opt.to)}bb recommended.`);}
   const best=adv.opts.reduce((a,b)=>b.f>a.f?b:a);
   const chose=userLabel(t,to);
   const RK={fold:0,check:1,call:1,bet:2,raise:2};let mis=null;
@@ -1423,10 +1473,10 @@ function presets(){
     else[2.2,3,4].forEach(m=>{const v=round5(cb*m);list.push({to:v,label:`${m}x`});});
   }else if(cb===0)[0.33,0.5,0.75,1].forEach(fr=>list.push({to:round5(fr*pot),label:`${Math.round(fr*100)}%`}));
   else[2.5,3,4].forEach(m=>list.push({to:round5(cb*m),label:`${m}x`}));
-  list.push({to:max,label:'全下'});
+  list.push({to:max,label:tx('全下','All-in')});
   const seen=new Set(),out=[];
   for(const x of list){const v=Math.min(Math.max(x.to,minTo),max);if(seen.has(v))continue;seen.add(v);out.push({to:v,label:x.label,rec:rec&&rec.to===v});}
-  if(rec&&rec.to&&!seen.has(rec.to))out.unshift({to:rec.to,label:'建议',rec:true});
+  if(rec&&rec.to&&!seen.has(rec.to))out.unshift({to:rec.to,label:tx('建议','Rec.'),rec:true,only:true});
   return out;
 }
 
@@ -1437,19 +1487,19 @@ function renderStats(){
   const S=curStats();
   const acc=S.dec?Math.round(S.score/S.dec*100)+'%':'—';
   const net=S.net,bb100=S.hands?net/BB/S.hands*100:null;
-  $('#stats').innerHTML=`<div class="stat"><span>已打手数</span><b>${S.hands}</b></div>
-  <div class="stat"><span>累计盈亏</span><b class="${net>0?'pos':net<0?'neg':''}">${net>0?'+':''}${fmt(net)}bb</b></div>
+  $('#stats').innerHTML=`<div class="stat"><span>${tx('已打手数','Hands')}</span><b>${S.hands}</b></div>
+  <div class="stat"><span>${tx('累计盈亏','Net')}</span><b class="${net>0?'pos':net<0?'neg':''}">${net>0?'+':''}${fmt(net)}bb</b></div>
   <div class="stat"><span>bb/100</span><b class="${bb100>0?'pos':bb100<0?'neg':''}">${bb100==null?'—':(bb100>0?'+':'')+bb100.toFixed(1)}</b></div>
-  <div class="stat"><span>决策得分</span><b>${acc}</b></div>`;
+  <div class="stat"><span>${tx('决策得分','Decision score')}</span><b>${acc}</b></div>`;
 }
 function renderTable(){
   const tb=$('#table');const W=tb.clientWidth||720,H=tb.clientHeight||470,small=W<560;
   const halfW=(small?39:54)+6,halfH=(small?42:46)+4,heroH=(small?50:56)+6;
   const rx=50-halfW/W*100,ry=50-halfH/H*100;
   const showAll=G.over&&G.result&&G.result.showdown;
-  let h=`<div class="felt"></div><div class="center"><div class="street">${G.over?'本手结束':STREET_CN[G.street]}</div><div class="board">`;
+  let h=`<div class="felt"></div><div class="center"><div class="street">${G.over?tx('本手结束','Hand over'):streetName(G.street)}</div><div class="board">`;
   for(let i=0;i<5;i++)h+=G.board[i]!=null?cardHTML(G.board[i],'md'):'<span class="slot"></span>';
-  h+=`</div><div class="potline">底池 <b>${fmt(potTotal())}</b> bb</div></div>`;
+  h+=`</div><div class="potline">${tx('底池','Pot')} <b>${fmt(potTotal())}</b> bb</div></div>`;
   for(const p of P){
     const a=(90+40*p.i)*Math.PI/180,c=Math.cos(a),s=Math.sin(a);
     const x=50+rx*c,y=p.i===0?100-heroH/H*100:50+ry*s;
@@ -1457,9 +1507,9 @@ function renderTable(){
     let cards='';
     if(!p.folded){if(p.isUser||showAll)cards=p.hole.map(cc=>cardHTML(cc,p.isUser?'lg':'sm')).join('');else cards='<span class="card back sm"></span><span class="card back sm"></span>';}
     else if(p.isUser)cards=p.hole.map(cc=>cardHTML(cc,'lg')).join('');
-    h+=`<div class="${cls.join(' ')}" style="left:${x}%;top:${y}%"><div class="hole">${cards}</div><div class="plate"><span class="nm">${p.name}</span><span class="ps">${POS_NAMES[p.pos]}</span></div><div class="stk">${fmt(p.stack)}${p.allIn&&!G.over?' · 全下':''}${p.isUser?'':` <span class="sty sty-${p.style}">${styleOf(p).n}</span>`}</div>${p.last?`<div class="tag t-${p.lastT||'x'}">${p.last}</div>`:''}</div>`;
+    h+=`<div class="${cls.join(' ')}" style="left:${x}%;top:${y}%"><div class="hole">${cards}</div><div class="plate"><span class="nm">${nmOf(p)}</span><span class="ps">${POS_NAMES[p.pos]}</span></div><div class="stk">${fmt(p.stack)}${p.allIn&&!G.over?tx(' · 全下',' · all-in'):''}${p.isUser?'':` <span class="sty sty-${p.style}">${styleOf(p).n}</span>`}</div>${p.last?`<div class="tag t-${p.lastT||'x'}">${p.last}</div>`:''}</div>`;
     if(p.bet>0){const bx=50+rx*0.6*c,by=p.i===0?50+ry*0.56:50+ry*0.6*s;h+=`<div class="chip" style="left:${bx}%;top:${by}%">${fmt(p.bet)}</div>`;}
-    if(p.i===G.button){const a2=a+0.33,dx=50+rx*0.74*Math.cos(a2),dy=50+ry*0.72*Math.sin(a2);h+=`<div class="dealer" style="left:${dx}%;top:${dy}%" title="庄家按钮">D</div>`;}
+    if(p.i===G.button){const a2=a+0.33,dx=50+rx*0.74*Math.cos(a2),dy=50+ry*0.72*Math.sin(a2);h+=`<div class="dealer" style="left:${dx}%;top:${dy}%" title="${tx('庄家按钮','Dealer button')}">D</div>`;}
   }
   tb.innerHTML=h;
 }
@@ -1468,13 +1518,13 @@ function renderAction(){
   if(G.over){
     const net=P[0].stack-START;
     const sd=G.decisions.filter(d=>!d.approx),hs=sd.length?Math.round(sd.reduce((a,d)=>a+d.rating.score,0)/sd.length*100):null;
-    el.innerHTML=`<div class="res">本手你${net>0?'<span class="pos">赢了</span>':net<0?'<span class="neg">输了</span>':'持平'} <b>${fmt(Math.abs(net))}</b> bb${hs!=null?` <span class="hs">· 决策得分 ${hs}%</span>`:''}</div>${verdictHTML()}<div class="acts"><button class="btn primary" id="nextBtn">下一手</button><button class="btn ghost copyb" id="copyBtn">复制这手牌，问 AI</button></div>`;
+    el.innerHTML=`<div class="res">${tx('本手你','This hand you ')}${net>0?`<span class="pos">${tx('赢了','won')}</span>`:net<0?`<span class="neg">${tx('输了','lost')}</span>`:tx('持平','broke even')} <b>${fmt(Math.abs(net))}</b> bb${hs!=null?` <span class="hs">· ${tx('决策得分','decision score')} ${hs}%</span>`:''}</div>${verdictHTML()}<div class="acts"><button class="btn primary" id="nextBtn">${tx('下一手','Next hand')}</button><button class="btn ghost copyb" id="copyBtn">${tx('复制这手牌，问 AI','Copy this hand to ask an AI')}</button></div>`;
     $('#copyBtn').onclick=copyHand;
     $('#nextBtn').onclick=newHand;return;
   }
   if(G.toAct!==0){
     const q=G.toAct>=0?P[G.toAct]:null;
-    el.innerHTML=`${verdictHTML()}<div class="wait">${q?`等待 ${who(q)} 行动…`:'发牌中…'}</div><div class="acts">${p.folded?'<button class="btn ghost" id="ffBtn">快进到本手结束</button>':''}<button class="btn ghost copyb" id="copyBtn">复制这手牌，问 AI</button></div>`;
+    el.innerHTML=`${verdictHTML()}<div class="wait">${q?tx(`等待 ${who(q)} 行动…`,`Waiting for ${who(q)}…`):tx('发牌中…','Dealing…')}</div><div class="acts">${p.folded?`<button class="btn ghost" id="ffBtn">${tx('快进到本手结束','Skip to the end of the hand')}</button>`:''}<button class="btn ghost copyb" id="copyBtn">${tx('复制这手牌，问 AI','Copy this hand to ask an AI')}</button></div>`;
     $('#copyBtn').onclick=copyHand;
     const ff=$('#ffBtn');if(ff)ff.onclick=()=>{G.fast=true;clearTimeout(G.timer);if(G.toAct>=0)botMove(G.toAct);else endStreet();};
     return;
@@ -1483,16 +1533,16 @@ function renderAction(){
   const others=P.some(q=>q!==p&&!q.folded&&!q.allIn);
   const canRaise=p.stack>toCall&&others&&G.currentBet<max;
   const eff=Math.min(p.stack,Math.max(0,...P.filter(q=>q!==p&&!q.folded).map(q=>q.stack)));
-  let h=`<div class="info"><span>轮到你 · ${posLabel(p.pos)}</span><span>底池 <b>${fmt(potTotal())}</b></span><span>需跟注 <b>${fmt(toCall)}</b></span><span>有效筹码 <b>${fmt(eff)}</b></span></div>${verdictHTML()}${miniHTML()}<div class="acts">`;
-  if(toCall>0)h+=`<button class="btn fold" id="bFold">弃牌</button>`;
-  h+=toCall>0?`<button class="btn call" id="bCall">${p.stack<=toCall?'跟注全下':'跟注'} ${fmt(toCall)}</button>`:`<button class="btn call" id="bCheck">过牌</button>`;
+  let h=`<div class="info"><span>${tx('轮到你','Your turn')} · ${posLabel(p.pos)}</span><span>${tx('底池','Pot')} <b>${fmt(potTotal())}</b></span><span>${tx('需跟注','To call')} <b>${fmt(toCall)}</b></span><span>${tx('有效筹码','Effective stack')} <b>${fmt(eff)}</b></span></div>${verdictHTML()}${miniHTML()}<div class="acts">`;
+  if(toCall>0)h+=`<button class="btn fold" id="bFold">${tx('弃牌','Fold')}</button>`;
+  h+=toCall>0?`<button class="btn call" id="bCall">${p.stack<=toCall?tx('跟注全下','Call all-in'):tx('跟注','Call')} ${fmt(toCall)}</button>`:`<button class="btn call" id="bCheck">${tx('过牌','Check')}</button>`;
   if(canRaise)h+=`<button class="btn raise" id="bRaise"></button>`;
   h+='</div>';
   if(canRaise){
-    h+='<div class="sizer">'+presets().map(x=>`<button class="pre${x.rec?' rec':''}${x.to===G.uiTo?' on':''}" data-to="${x.to}">${x.label}${x.rec&&x.label!=='建议'?' ·建议':''}</button>`).join('')+
-      `<input type="range" id="sz" min="${minTo}" max="${max}" step="5" value="${G.uiTo}" aria-label="下注尺度"><input type="number" id="szn" min="${minTo/BB}" max="${max/BB}" step="0.5" value="${G.uiTo/BB}" aria-label="下注金额（bb）"></div>`;
+    h+='<div class="sizer">'+presets().map(x=>`<button class="pre${x.rec?' rec':''}${x.to===G.uiTo?' on':''}" data-to="${x.to}">${x.label}${x.rec&&!x.only?tx(' ·建议',' · rec.'):''}</button>`).join('')+
+      `<input type="range" id="sz" min="${minTo}" max="${max}" step="5" value="${G.uiTo}" aria-label="${tx('下注尺度','Bet size')}"><input type="number" id="szn" min="${minTo/BB}" max="${max/BB}" step="0.5" value="${G.uiTo/BB}" aria-label="${tx('下注金额（bb）','Bet amount (bb)')}"></div>`;
   }
-  h+='<div class="copyrow"><button class="lnk" id="copyBtn">复制这手牌，问 AI</button></div>';
+  h+=`<div class="copyrow"><button class="lnk" id="copyBtn">${tx('复制这手牌，问 AI','Copy this hand to ask an AI')}</button></div>`;
   el.innerHTML=h;
   $('#copyBtn').onclick=copyHand;
   const bf=$('#bFold');if(bf)bf.onclick=()=>userAct('fold');
@@ -1500,7 +1550,7 @@ function renderAction(){
   const bk=$('#bCheck');if(bk)bk.onclick=()=>userAct('check');
   if(canRaise){
     const br=$('#bRaise'),sz=$('#sz'),szn=$('#szn');
-    const setTo=v=>{v=Math.min(Math.max(Math.round(v/5)*5,minTo),max);G.uiTo=v;sz.value=v;szn.value=v/BB;br.textContent=v>=max?`全下 ${fmt(max)}`:(G.currentBet===0?`下注 ${fmt(v)}`:`加注到 ${fmt(v)}`);el.querySelectorAll('.pre').forEach(b=>b.classList.toggle('on',+b.dataset.to===v));};
+    const setTo=v=>{v=Math.min(Math.max(Math.round(v/5)*5,minTo),max);G.uiTo=v;sz.value=v;szn.value=v/BB;br.textContent=v>=max?tx(`全下 ${fmt(max)}`,`All-in ${fmt(max)}`):(G.currentBet===0?tx(`下注 ${fmt(v)}`,`Bet ${fmt(v)}`):tx(`加注到 ${fmt(v)}`,`Raise to ${fmt(v)}`));el.querySelectorAll('.pre').forEach(b=>b.classList.toggle('on',+b.dataset.to===v));};
     setTo(G.uiTo||minTo);
     sz.oninput=()=>setTo(+sz.value);szn.onchange=()=>setTo(Math.round(+szn.value*BB));
     el.querySelectorAll('.pre').forEach(b=>b.onclick=()=>setTo(+b.dataset.to));
@@ -1509,24 +1559,24 @@ function renderAction(){
 }
 function verdictHTML(){
   const d=G.feedback;if(!d||!G.decisions.length)return'';
-  if(d.approx)return `<div class="verdict lv-na"><span class="vi">·</span><span>上一步 <b>${d.chose}</b>：近似局面，不计分（近似建议里这个动作占 ${pc(d.f)}，主选 <b>${d.best}</b>）</span></div>`;
+  if(d.approx)return `<div class="verdict lv-na"><span class="vi">·</span><span>${tx(`上一步 <b>${d.chose}</b>：近似局面，不计分（近似建议里这个动作占 ${pc(d.f)}，主选 <b>${d.best}</b>）`,`Last move <b>${d.chose}</b>: approximate spot, not scored (the approximate advice gives it ${pc(d.f)}; main choice <b>${d.best}</b>)`)}</span></div>`;
   const icon={best:'✓',ok:'✓',meh:'!',bad:'✗'}[d.rating.lvl];
-  const tail=d.rating.lvl==='best'?'':` · GTO 主选 <b>${d.best}</b>`;
-  return `<div class="verdict lv-${d.rating.lvl}"><span class="vi">${icon}</span><span>上一步 <b>${d.chose}</b>：${d.rating.txt}（GTO ${pc(d.f)}）${tail}${d.note?' · '+d.note:''}</span></div>`;
+  const tail=d.rating.lvl==='best'?'':tx(` · GTO 主选 <b>${d.best}</b>`,` · GTO's main choice <b>${d.best}</b>`);
+  return `<div class="verdict lv-${d.rating.lvl}"><span class="vi">${icon}</span><span>${tx('上一步','Last move')} <b>${d.chose}</b>${tx('：',': ')}${d.rating.txt}${tx(`（GTO ${pc(d.f)}）`,` (GTO ${pc(d.f)})`)}${tail}${d.note?' · '+d.note:''}</span></div>`;
 }
 function miniHTML(){
   if(!G.cur||!G.showAdvice)return'';
   const o=G.cur.opts;
-  return `<div class="mini"><div class="fbar">${o.filter(x=>x.f>0.001).map(x=>`<span class="f-${x.t}" style="width:${x.f*100}%"></span>`).join('')}</div><span>${G.cur.ctx&&G.cur.ctx.approx?'近似建议（不计分）':'GTO'}：${o.map(x=>`${x.label.replace(/（.*）/,'')} ${pc(x.f)}`).join(' · ')}</span></div>`;
+  return `<div class="mini"><div class="fbar">${o.filter(x=>x.f>0.001).map(x=>`<span class="f-${x.t}" style="width:${x.f*100}%"></span>`).join('')}</div><span>${G.cur.ctx&&G.cur.ctx.approx?tx('近似建议（不计分）','Approximate advice (not scored)'):'GTO'}${tx('：',': ')}${o.map(x=>`${x.label.replace(/（.*）| \(.*\)/,'')} ${pc(x.f)}`).join(' · ')}</span></div>`;
 }
 function fbHTML(d){
   if(!d)return'';
-  if(d.approx)return `<div class="fb lv-na"><span class="badge">不计分</span>你选择了 <b>${d.chose}</b>。这个局面没有标准范围表，近似建议里这个动作占 ${pc(d.f)}，主选是${d.best}。</div>`;
-  return `<div class="fb lv-${d.rating.lvl}"><span class="badge">${d.rating.txt}</span>你选择了 <b>${d.chose}</b>，GTO 在这里选它的频率是 ${pc(d.f)}。${d.rating.lvl==='best'?'':`最高频的动作：${d.best}。`}${d.note?' '+d.note:''}</div>`;
+  if(d.approx)return `<div class="fb lv-na"><span class="badge">${tx('不计分','Not scored')}</span>${tx(`你选择了 <b>${d.chose}</b>。这个局面没有标准范围表，近似建议里这个动作占 ${pc(d.f)}，主选是${d.best}。`,`You chose <b>${d.chose}</b>. There is no standard chart for this spot; the approximate advice gives it ${pc(d.f)}, and the main choice is ${d.best}.`)}</div>`;
+  return `<div class="fb lv-${d.rating.lvl}"><span class="badge">${d.rating.txt}</span>${tx(`你选择了 <b>${d.chose}</b>，GTO 在这里选它的频率是 ${pc(d.f)}。${d.rating.lvl==='best'?'':`最高频的动作：${d.best}。`}`,`You chose <b>${d.chose}</b>; GTO picks it ${pc(d.f)} of the time here.${d.rating.lvl==='best'?'':` Most frequent action: ${d.best}.`}`)}${d.note?' '+d.note:''}</div>`;
 }
 function freqHTML(opts){
   const top=opts.reduce((a,b)=>b.f>a.f?b:a);
-  return `<div class="fbar" role="img" aria-label="动作频率">${opts.filter(o=>o.f>0.001).map(o=>`<span class="f-${o.t}" style="width:${o.f*100}%"></span>`).join('')}</div>
+  return `<div class="fbar" role="img" aria-label="${tx('动作频率','Action frequencies')}">${opts.filter(o=>o.f>0.001).map(o=>`<span class="f-${o.t}" style="width:${o.f*100}%"></span>`).join('')}</div>
   <ul class="opts">${opts.map(o=>`<li class="${o===top?'top':''}${o.f<0.005?' zero':''}"><i class="sw f-${o.t}"></i><span>${o.label}</span><b>${pc(o.f)}</b></li>`).join('')}</ul>`;
 }
 function matrixHTML(a){
@@ -1536,27 +1586,27 @@ function matrixHTML(a){
     const bg=`linear-gradient(to right,var(--raise) 0 ${r}%,var(--call) ${r}% ${c}%,#2b3640 ${c}% 100%)`;
     h+=`<div class="${k===a.k?'hero':''}" style="background:${bg}">${clsName(k).replace(/[so]$/,'')}</div>`;
   }
-  h+='</div></div><div class="legend"><span><i class="f-raise"></i>加注</span><span><i class="f-call"></i>'+(a.pre.m.check?'过牌':'跟注')+'</span><span><i style="background:#2b3640"></i>弃牌</span><span>右上同花 · 左下不同花 · 白框是你的手牌</span></div>';
+  h+=`</div></div><div class="legend"><span><i class="f-raise"></i>${tx('加注','Raise')}</span><span><i class="f-call"></i>${a.pre.m.check?tx('过牌','Check'):tx('跟注','Call')}</span><span><i style="background:#2b3640"></i>${tx('弃牌','Fold')}</span><span>${tx('右上同花 · 左下不同花 · 白框是你的手牌','Suited top-right · offsuit bottom-left · white box is your hand')}</span></div>`;
   return h;
 }
-function kindLabel(a){return a.street>0?'翻后 · 启发式近似':a.ctx&&a.ctx.approx?'翻前 · 近似建议（不计分）':'翻前 · 求解器范围近似';}
+function kindLabel(a){return a.street>0?tx('翻后 · 启发式近似','Postflop · heuristic approximation'):a.ctx&&a.ctx.approx?tx('翻前 · 近似建议（不计分）','Preflop · approximate advice (not scored)'):tx('翻前 · 求解器范围近似','Preflop · approximated solver ranges');}
 function adviceBody(a){
   let h=`<p class="sit">${a.sit}</p>`;
-  if(a.ctx&&a.ctx.approx)h+=`<div class="warnbox">此局面没有标准范围表，以下为近似建议，不计入 GTO 评分。${a.ctx.kind==='approx'?'近似方法：用每手牌对加注者估计范围的胜率，按位置和后面还没行动的人数折算，再和跟注需要的胜率比较。':'溜入底池里的加注/过牌范围是按开池范围调整出来的，没有求解器数据。'}</div>`;
+  if(a.ctx&&a.ctx.approx)h+=`<div class="warnbox">${tx('此局面没有标准范围表，以下为近似建议，不计入 GTO 评分。','There is no standard chart for this spot; the advice below is approximate and not counted in your GTO score. ')}${a.ctx.kind==='approx'?tx('近似方法：用每手牌对加注者估计范围的胜率，按位置和后面还没行动的人数折算，再和跟注需要的胜率比较。','Method: each hand\'s equity against the raiser\'s estimated range, adjusted for position and the number of players still to act, compared with the equity needed to call.'):tx('溜入底池里的加注/过牌范围是按开池范围调整出来的，没有求解器数据。','Raising/checking ranges in limped pots are adapted from opening ranges; there is no solver data.')}</div>`;
   h+=freqHTML(a.opts);
   if(a.street===0){
-    h+=`<div class="line"><span class="lbl">你的手牌</span> <b>${clsName(a.k)}</b> · <span class="lbl">加注范围</span> ${a.rp}%${a.cp>0?` · <span class="lbl">跟注范围</span> ${a.cp}%`:''}</div>`;
+    h+=`<div class="line"><span class="lbl">${tx('你的手牌','Your hand')}</span> <b>${clsName(a.k)}</b> · <span class="lbl">${tx('加注范围','Raising range')}</span> ${a.rp}%${a.cp>0?` · <span class="lbl">${tx('跟注范围','Calling range')}</span> ${a.cp}%`:''}</div>`;
     h+=`<ul class="why">${a.reasons.map(r=>`<li>${r}</li>`).join('')}</ul>`;
     const ro=a.opts.find(o=>o.t==='raise');
-    if(a.sizeNote&&ro&&ro.f>=0.05)h+=`<div class="sizebox"><div class="sbt">为什么${ro.label.replace(/\s[\d.]+$/,'')}这个尺度？</div><p>${a.sizeNote}</p></div>`;
+    if(a.sizeNote&&ro&&ro.f>=0.05)h+=`<div class="sizebox"><div class="sbt">${tx(`为什么${ro.label.replace(/\s[\d.]+$/,'')}这个尺度？`,'Why this size?')}</div><p>${a.sizeNote}</p></div>`;
     h+=hintHTML(a.hint);
     h+=matrixHTML(a);
   }else{
-    h+=`<div class="grid4"><div class="kv"><span>胜率（${a.oppNames&&a.oppNames.length>1?`同时对 ${a.oppNames.length} 人`:'对估计范围'}）</span><b>${pc(a.eq)}</b></div><div class="kv"><span>跟注所需胜率</span><b>${a.potOdds!=null?pc(a.potOdds):'—'}</b></div><div class="kv"><span>MDF</span><b>${a.mdf!=null?pc(a.mdf):'—'}</b></div><div class="kv"><span>SPR</span><b>${a.spr.toFixed(1)}</b></div></div>`;
-    h+=`<div class="line"><span class="lbl">牌力</span> ${a.made} · ${a.cl.d}${a.cl.draw?` · <span class="lbl">听牌</span> ${a.cl.draw}`:''}</div><div class="line"><span class="lbl">牌面</span> ${a.tex.label}</div>`;
+    h+=`<div class="grid4"><div class="kv"><span>${a.oppNames&&a.oppNames.length>1?tx(`胜率（同时对 ${a.oppNames.length} 人）`,`Equity (vs ${a.oppNames.length} players)`):tx('胜率（对估计范围）','Equity (vs est. range)')}</span><b>${pc(a.eq)}</b></div><div class="kv"><span>${tx('跟注所需胜率','Equity to call')}</span><b>${a.potOdds!=null?pc(a.potOdds):'—'}</b></div><div class="kv"><span>MDF</span><b>${a.mdf!=null?pc(a.mdf):'—'}</b></div><div class="kv"><span>SPR</span><b>${a.spr.toFixed(1)}</b></div></div>`;
+    h+=`<div class="line"><span class="lbl">${tx('牌力','Hand')}</span> ${a.made} · ${a.cl.d}${a.cl.draw?` · <span class="lbl">${tx('听牌','Draw')}</span> ${a.cl.draw}`:''}</div><div class="line"><span class="lbl">${tx('牌面','Board')}</span> ${a.tex.label}</div>`;
     if(a.dist){
       const order=BUCKET_UI;
-      h+=`<div class="dist"><div class="line"><span class="lbl">${who(a.mainOpp)} 的估计范围构成</span></div><div class="bar">${order.map(([k])=>`<span class="b-${k}" style="width:${a.dist[k]*100}%"></span>`).join('')}</div><div class="legend">${order.map(([k,l])=>`<span><i class="b-${k}"></i>${l} ${pc(a.dist[k])}</span>`).join('')}</div></div>`;
+      h+=`<div class="dist"><div class="line"><span class="lbl">${tx(`${who(a.mainOpp)} 的估计范围构成`,`${who(a.mainOpp)}'s estimated range`)}</span></div><div class="bar">${order.map(([k])=>`<span class="b-${k}" style="width:${a.dist[k]*100}%"></span>`).join('')}</div><div class="legend">${order.map(x=>`<span><i class="b-${x[0]}"></i>${bucketName(x)} ${pc(a.dist[x[0]])}</span>`).join('')}</div></div>`;
     }
     h+=`<ul class="why">${a.reasons.map(r=>`<li>${r}</li>`).join('')}</ul>`;
     h+=sizeHTML(a);
@@ -1566,47 +1616,47 @@ function adviceBody(a){
 }
 function hintHTML(x){
   if(!x)return'';
-  return `<div class="hint"><div class="sbt">剥削提示 · ${x.who} 是${x.full}</div>${x.hand?`<p class="hhand">这手牌：${x.hand}</p>`:''}<p>${x.t}</p><span>GTO 评分只按 GTO 算，这条提示不影响评分。</span></div>`;
+  return `<div class="hint"><div class="sbt">${tx(`剥削提示 · ${x.who} 是${x.full}`,`Exploit tip · ${x.who} is a ${x.full}`)}</div>${x.hand?`<p class="hhand">${tx('这手牌：','This hand: ')}${x.hand}</p>`:''}<p>${x.t}</p><span>${tx('GTO 评分只按 GTO 算，这条提示不影响评分。','Your score is GTO-only; this tip does not affect it.')}</span></div>`;
 }
 function sizeHTML(a){
   let h='';
   const bo=a.opts.find(o=>o.t==='bet'),ro=a.opts.find(o=>o.t==='raise');
   if(a.size&&bo&&bo.f>=0.05){
-    const z=a.size,lab=z.allin?'全下':((bo.label.match(/（(\d+% 底池)）/)||[])[1]||`${Math.round(z.f*100)}% 底池`);
-    const ttl=bo.f>=0.5?`为什么下注 ${lab}？`:`如果下注，为什么用 ${lab}？`;
+    const z=a.size,pct=bo.pct!=null?bo.pct:Math.round(z.f*100),lab=z.allin?tx('全下','all-in'):tx(`${pct}% 底池`,`${pct}% pot`);
+    const ttl=bo.f>=0.5?tx(`为什么下注 ${lab}？`,`Why bet ${lab}?`):tx(`如果下注，为什么用 ${lab}？`,`If betting, why ${lab}?`);
     h+=`<div class="sizebox"><div class="sbt">${ttl}</div><ul class="why">${z.R.map(r=>`<li>${r}</li>`).join('')}</ul>
-    <div class="szwrap"><table class="sz"><thead><tr><th>尺度</th><th>对手跟注需要的胜率</th><th>诈唬需要的弃牌率</th><th>在这里</th></tr></thead><tbody>${
-      z.table.map(r=>`<tr class="${r.verdict==='推荐'?'rec':''}"><td>${r.x>=1.5?'超池 ':r.x===1?'满池 ':''}${Math.round(r.x*100)}%</td><td>${pc(r.need)}</td><td>${pc(r.fold)}</td><td>${r.verdict}</td></tr>`).join('')
-    }</tbody></table></div><p class="szn">跟注需要的胜率 = 下注 ÷（底池 + 2 × 下注）；诈唬需要的弃牌率 = 下注 ÷（底池 + 下注）。下得越大，对手跟注越贵，但你的诈唬也需要对手弃得更多。${z.allin?' 这里因为筹码深度直接全下，表格只作对比。':''}</p></div>`;
+    <div class="szwrap"><table class="sz"><thead><tr><th>${tx('尺度','Size')}</th><th>${tx('对手跟注需要的胜率','Equity he needs to call')}</th><th>${tx('诈唬需要的弃牌率','Folds a bluff needs')}</th><th>${tx('在这里','Here')}</th></tr></thead><tbody>${
+      z.table.map(r=>`<tr class="${r.rec?'rec':''}"><td>${r.x>=1.5?tx('超池 ','Overbet '):r.x===1?tx('满池 ','Pot '):''}${Math.round(r.x*100)}%</td><td>${pc(r.need)}</td><td>${pc(r.fold)}</td><td>${r.verdict}</td></tr>`).join('')
+    }</tbody></table></div><p class="szn">${tx('跟注需要的胜率 = 下注 ÷（底池 + 2 × 下注）；诈唬需要的弃牌率 = 下注 ÷（底池 + 下注）。下得越大，对手跟注越贵，但你的诈唬也需要对手弃得更多。','Equity to call = bet ÷ (pot + 2 × bet); folds a bluff needs = bet ÷ (pot + bet). The bigger the bet, the more calling costs him, but the more often a bluff needs him to fold.')}${z.allin?tx(' 这里因为筹码深度直接全下，表格只作对比。',' Here the stack depth means going all-in; the table is only for comparison.'):''}</p></div>`;
   }
-  if(a.rsize&&ro&&ro.f>=0.05)h+=`<div class="sizebox"><div class="sbt">为什么${ro.label}？</div><ul class="why">${a.rsize.map(r=>`<li>${r}</li>`).join('')}</ul></div>`;
+  if(a.rsize&&ro&&ro.f>=0.05)h+=`<div class="sizebox"><div class="sbt">${tx(`为什么${ro.label}？`,`Why ${ro.label}?`)}</div><ul class="why">${a.rsize.map(r=>`<li>${r}</li>`).join('')}</ul></div>`;
   return h;
 }
 function reviewHTML(){
-  const r=G.result;let h=`<h2>本手复盘 <span class="kind">第 ${G.handNo} 手</span></h2>`;
+  const r=G.result;let h=`<h2>${tx('本手复盘','Hand review')} <span class="kind">${tx(`第 ${G.handNo} 手`,`Hand #${G.handNo}`)}</span></h2>`;
   if(r&&r.showdown){
-    h+='<div class="sd">'+P.filter(q=>!q.folded).sort((a,b)=>r.vals[b.i]-r.vals[a.i]).map(q=>`<div>${q.hole.map(c=>cardHTML(c,'xs')).join('')}<span class="${r.won[q.i]?'w':''}">${who(q)} · ${handName(r.vals[q.i])}${r.won[q.i]?` · 赢 ${fmt(r.won[q.i])}bb`:''}</span></div>`).join('')+'</div>';
-  }else if(r){const w=P.find(q=>r.won[q.i]>0);h+=`<p class="empty">${who(w)} 下注后无人跟注，直接赢下底池。</p>`;}
+    h+='<div class="sd">'+P.filter(q=>!q.folded).sort((a,b)=>r.vals[b.i]-r.vals[a.i]).map(q=>`<div>${q.hole.map(c=>cardHTML(c,'xs')).join('')}<span class="${r.won[q.i]?'w':''}">${who(q)} · ${handName(r.vals[q.i])}${r.won[q.i]?tx(` · 赢 ${fmt(r.won[q.i])}bb`,` · wins ${fmt(r.won[q.i])}bb`):''}</span></div>`).join('')+'</div>';
+  }else if(r){const w=P.find(q=>r.won[q.i]>0);h+=`<p class="empty">${tx(`${who(w)} 下注后无人跟注，直接赢下底池。`,`${who(w)} bet, nobody called, and he won the pot.`)}</p>`;}
   if(G.decisions.length){
     const sd=G.decisions.filter(d=>!d.approx),na=G.decisions.length-sd.length;
-    h+=sd.length?`<div class="line"><span class="lbl">本手决策得分</span> <b>${Math.round(sd.reduce((a,d)=>a+d.rating.score,0)/sd.length*100)}%</b>（${sd.length} 个计分决策${na?`，${na} 个近似局面不计分`:''}）</div>`:`<div class="line"><span class="lbl">本手决策得分</span> 无（${na} 个决策都是近似局面，不计分）</div>`;
-    h+='<div class="revwrap"><table class="rev"><thead><tr><th>街</th><th>你的选择</th><th>GTO 最高频</th><th>评价</th></tr></thead><tbody>'+
-      G.decisions.map(d=>`<tr><td>${STREET_CN[d.street]}</td><td>${d.chose}</td><td>${d.best}</td><td><span class="rv lv-${d.rating.lvl}">${d.rating.txt}</span>${d.approx?'':' '+pc(d.f)}${d.note?`<br><span class="lbl">${d.note}</span>`:''}</td></tr>`).join('')+'</tbody></table></div>';
-  }else h+='<p class="empty">这手你没有需要做的决定（比如前面全弃牌到你的大盲）。</p>';
+    h+=sd.length?`<div class="line"><span class="lbl">${tx('本手决策得分','Decision score this hand')}</span> <b>${Math.round(sd.reduce((a,d)=>a+d.rating.score,0)/sd.length*100)}%</b>${tx(`（${sd.length} 个计分决策${na?`，${na} 个近似局面不计分`:''}）`,` (${sd.length} scored decision${sd.length>1?'s':''}${na?`, ${na} approximate spot${na>1?'s':''} not scored`:''})`)}</div>`:`<div class="line"><span class="lbl">${tx('本手决策得分','Decision score this hand')}</span> ${tx(`无（${na} 个决策都是近似局面，不计分）`,`none (all ${na} decisions were approximate spots, not scored)`)}</div>`;
+    h+=`<div class="revwrap"><table class="rev"><thead><tr><th>${tx('街','Street')}</th><th>${tx('你的选择','Your choice')}</th><th>${tx('GTO 最高频','GTO top choice')}</th><th>${tx('评价','Rating')}</th></tr></thead><tbody>`+
+      G.decisions.map(d=>`<tr><td>${streetName(d.street)}</td><td>${d.chose}</td><td>${d.best}</td><td><span class="rv lv-${d.rating.lvl}">${d.rating.txt}</span>${d.approx?'':' '+pc(d.f)}${d.note?`<br><span class="lbl">${d.note}</span>`:''}</td></tr>`).join('')+'</tbody></table></div>';
+  }else h+=`<p class="empty">${tx('这手你没有需要做的决定（比如前面全弃牌到你的大盲）。','You had no decision to make this hand (for example, everyone folded to your big blind).')}</p>`;
   return h;
 }
 function renderAdvice(){
   const el=$('#advice');
-  if(G.over){el.innerHTML=reviewHTML()+(G.lastAdvice?`<div class="sep"></div><h2>你最后一步的分析 <span class="kind">${kindLabel(G.lastAdvice)}</span></h2>${fbHTML(G.feedback)}${adviceBody(G.lastAdvice)}`:'');return;}
+  if(G.over){el.innerHTML=reviewHTML()+(G.lastAdvice?`<div class="sep"></div><h2>${tx('你最后一步的分析','Analysis of your last move')} <span class="kind">${kindLabel(G.lastAdvice)}</span></h2>${fbHTML(G.feedback)}${adviceBody(G.lastAdvice)}`:'');return;}
   if(G.toAct===0&&G.cur){
     const kind=kindLabel(G.cur);
-    let h=`<h2>GTO 建议 <span class="kind">${kind}</span></h2>`;
-    if(G.feedback&&G.feedback.street===G.street&&G.decisions.length)h+=`<div class="line"><span class="lbl">上一步</span></div>`+fbHTML(G.feedback);
-    if(!G.showAdvice){h+=`<div class="quiz"><p class="sit">${G.cur.sit}</p><span>测验模式：先在下方做出你的决定，再看 GTO 怎么打。</span><button class="btn ghost" id="peek">现在就看建议</button></div>`;el.innerHTML=h;$('#peek').onclick=()=>{G.showAdvice=true;render();};return;}
+    let h=`<h2>${tx('GTO 建议','GTO advice')} <span class="kind">${kind}</span></h2>`;
+    if(G.feedback&&G.feedback.street===G.street&&G.decisions.length)h+=`<div class="line"><span class="lbl">${tx('上一步','Last move')}</span></div>`+fbHTML(G.feedback);
+    if(!G.showAdvice){h+=`<div class="quiz"><p class="sit">${G.cur.sit}</p><span>${tx('测验模式：先在下方做出你的决定，再看 GTO 怎么打。','Quiz mode: make your decision below first, then see how GTO plays it.')}</span><button class="btn ghost" id="peek">${tx('现在就看建议','Show advice now')}</button></div>`;el.innerHTML=h;$('#peek').onclick=()=>{G.showAdvice=true;render();};return;}
     el.innerHTML=h+adviceBody(G.cur);return;
   }
-  if(G.lastAdvice){el.innerHTML=`<h2>上一步分析 <span class="kind">${kindLabel(G.lastAdvice)}</span></h2>${fbHTML(G.feedback)}${adviceBody(G.lastAdvice)}`;return;}
-  el.innerHTML=`<h2>GTO 建议</h2><p class="empty">轮到你行动时，这里会显示 GTO 建议的动作和频率、范围矩阵、胜率和理由。</p>`;
+  if(G.lastAdvice){el.innerHTML=`<h2>${tx('上一步分析','Last move analysis')} <span class="kind">${kindLabel(G.lastAdvice)}</span></h2>${fbHTML(G.feedback)}${adviceBody(G.lastAdvice)}`;return;}
+  el.innerHTML=`<h2>${tx('GTO 建议','GTO advice')}</h2><p class="empty">${tx('轮到你行动时，这里会显示 GTO 建议的动作和频率、范围矩阵、胜率和理由。','When it is your turn, this panel shows the GTO actions and frequencies, the range matrix, equity and the reasoning.')}</p>`;
 }
 function renderLog(){
   const el=$('#log');el.innerHTML=G.log.map(l=>`<li class="${l.cls}">${l.t}</li>`).join('');el.scrollTop=el.scrollHeight;
@@ -1618,6 +1668,7 @@ function renderLog(){
 function plain(t){return String(t).replace(/<[^>]+>/g,'');}
 function adviceText(a){
   const L=[];
+  if(LANG==='en')return adviceTextEN(a);
   L.push(`局面：${plain(a.sit)}`);
   if(a.ctx&&a.ctx.approx)L.push('（程序说明：这个局面没有标准范围表，给的是近似建议，不计分）');
   L.push('程序建议：'+a.opts.map(o=>`${o.label} ${pc(o.f)}`).join(' / '));
@@ -1634,10 +1685,29 @@ function adviceText(a){
   if(a.hint)L.push(`程序的剥削提示（${a.hint.who} 是${a.hint.full}）：${a.hint.hand?a.hint.hand+' ':''}${a.hint.t}`);
   return L;
 }
+function adviceTextEN(a){
+  const L=[];
+  L.push(`Spot: ${plain(a.sit)}`);
+  if(a.ctx&&a.ctx.approx)L.push('(Program note: there is no standard chart for this spot; the advice is approximate and not scored)');
+  L.push('Program advice: '+a.opts.map(o=>`${o.label} ${pc(o.f)}`).join(' / '));
+  if(a.street===0)L.push(`My hand class: ${clsName(a.k)}; the program's raising range here is about ${a.rp}%${a.cp>0?`, calling range about ${a.cp}%`:''}`);
+  else{
+    L.push(`My equity ${a.oppNames&&a.oppNames.length>1?`against the estimated ranges of ${a.oppNames.length} opponents at once (${a.oppNames.join(', ')})`:'against the opponent\'s estimated range'}: ${pc(a.eq)}${a.potOdds!=null?`; equity needed to call: ${pc(a.potOdds)}; MDF: ${pc(a.mdf)}`:''}; SPR: ${a.spr.toFixed(1)}`);
+    if(a.made)L.push(`My hand: ${a.made} — ${a.cl.d}${a.cl.draw?', '+a.cl.draw:''}; board: ${a.tex.label}`);
+    if(a.dist&&a.mainOpp)L.push(`${who(a.mainOpp)}'s estimated range: `+BUCKET_UI.map(x=>`${x[2]} ${pc(a.dist[x[0]])}`).join(', '));
+  }
+  if(a.reasons&&a.reasons.length)L.push('Program\'s reasons: '+a.reasons.map(plain).join(' '));
+  const bo=a.opts.find(o=>o.t==='bet');
+  if(a.size&&bo&&bo.f>=0.05)L.push('Program\'s sizing reasons: '+a.size.R.map(plain).join(' '));
+  if(a.sizeNote)L.push('Program\'s sizing reasons: '+plain(a.sizeNote));
+  if(a.hint)L.push(`Program's exploit tip (${a.hint.who} is a ${a.hint.full}): ${a.hint.hand?a.hint.hand+' ':''}${a.hint.t}`);
+  return L;
+}
 function handText(){
   const me=P[0],hd=G.log.map(l=>l.cls).lastIndexOf('hd');
   const acts=G.log.slice(hd+1).map(l=>l.cls==='st'?`\n${l.t}`:l.t);
-  const seats=P.slice().sort((a,b)=>a.pos-b.pos).map(q=>`${POS_NAMES[q.pos]} ${q.name}${q.isUser?'（我）':`（${styleOf(q).full}）`}`);
+  if(LANG==='en')return handTextEN(acts);
+  const seats=P.slice().sort((a,b)=>a.pos-b.pos).map(q=>`${POS_NAMES[q.pos]} ${nmOf(q)}${q.isUser?'（我）':`（${styleOf(q).full}）`}`);
   const L=[];
   L.push('我在用一个德州扑克 GTO 训练程序练习（九人桌无限注，盲注 0.5/1bb，每手开始每人 100bb，对手是 AI）。');
   L.push('程序建议的来源：翻前标准局面用近似求解器的范围表；翻前非标准局面（跛入后的加注、非标准尺度、不标准的 3bet/4bet）用近似模型，并且不计分；翻后建议是根据"对对手估计范围的胜率、底池赔率、MDF、牌面结构"推算的启发式近似，不是求解器结果。对手的"类型"是程序给 AI 设定的打法风格。');
@@ -1665,30 +1735,61 @@ function handText(){
   L.push('');L.push('【我的问题】');L.push('');
   return L.join('\n');
 }
+function handTextEN(acts){
+  const me=P[0];
+  const seats=P.slice().sort((a,b)=>a.pos-b.pos).map(q=>q.isUser?`${POS_NAMES[q.pos]} (me)`:`${POS_NAMES[q.pos]} ${nmOf(q)}: ${styleOf(q).full}`);
+  const L=[];
+  L.push('I am practising with a Texas Hold\'em GTO training program (9-max no-limit, blinds 0.5/1bb, everyone starts each hand with 100bb, opponents are AI).');
+  L.push('Where the program\'s advice comes from: standard preflop spots use approximated solver range charts; non-standard preflop spots (raises after limps, unusual sizes, non-standard 3-bets/4-bets) use an approximate model and are not scored; postflop advice is a heuristic approximation based on "equity against the opponents\' estimated ranges, pot odds, MDF and board texture", not a solver result. Each opponent\'s "type" is the playing style the program gives that AI.');
+  L.push('Please analyse this hand as a professional player or coach. If the program\'s advice is wrong, say exactly what is wrong and why.');
+  L.push('');
+  L.push(`[Hand #${G.handNo}]`);
+  L.push(`Seats (by position): ${seats.join('; ')}`);
+  L.push(`My position and hand: ${POS_NAMES[me.pos]}, ${me.hole.map(cardTxt).join(' ')}`);
+  L.push('');
+  L.push('[Action] (amounts in bb; "raise to X" means X in total on this street)');
+  L.push(acts.join('\n').replace(/^\n/,''));
+  if(!G.over)L.push(`\n(This hand is still in progress: ${STREET_EN[G.street]}, pot ${fmt(potTotal())}bb${G.board.length?`, board ${G.board.map(cardTxt).join(' ')}`:''})`);
+  if(G.decisions.length){
+    L.push('');L.push('[The program\'s advice at each of my decisions, and what I chose]');
+    G.decisions.forEach((d,i)=>{
+      L.push(`${i+1}. ${STREET_EN[d.street]}${d.board.length?` (board ${d.board.map(cardTxt).join(' ')})`:''}`);
+      (d.advText||[]).forEach(x=>L.push('   '+x));
+      L.push(`   My choice: ${d.chose}; program's rating: ${d.rating.txt}${d.approx?'':` (GTO picks this action ${pc(d.f)} of the time)`}${d.note?'; '+d.note:''}`);
+    });
+  }
+  if(!G.over&&G.toAct===0&&G.cur){
+    L.push('');L.push('[It is my turn now (no decision yet); the program\'s advice]');
+    adviceText(G.cur).forEach(x=>L.push('   '+x));
+  }
+  L.push('');L.push('[My question]');L.push('');
+  return L.join('\n');
+}
 function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toast.tm);toast.tm=setTimeout(()=>{t.hidden=true;},2600);}
 function copyHand(){
-  const txt=handText();
+  const txt=LANG==='hk'?HK(handText()):handText();
   const fallback=()=>{
-    $('#copySheet').innerHTML=`<button class="x" id="copyClose" aria-label="关闭">×</button><h2>复制这手牌</h2><p class="fine">自动复制没有成功。请全选下面的文字，手动复制。</p><textarea id="copyTa" readonly rows="12"></textarea><div class="row"><button class="btn primary sm" id="copyOk">好</button></div>`;
+    $('#copySheet').innerHTML=`<button class="x" id="copyClose" aria-label="${tx('关闭','Close')}">×</button><h2>${tx('复制这手牌','Copy this hand')}</h2><p class="fine">${tx('自动复制没有成功。请全选下面的文字，手动复制。','Automatic copy did not work. Select all the text below and copy it yourself.')}</p><textarea id="copyTa" readonly rows="12"></textarea><div class="row"><button class="btn primary sm" id="copyOk">${tx('好','OK')}</button></div>`;
     $('#copyModal').hidden=false;const ta=$('#copyTa');ta.value=txt;ta.focus();ta.select();
     const close=()=>{$('#copyModal').hidden=true;};$('#copyClose').onclick=close;$('#copyOk').onclick=close;
   };
   try{
-    navigator.clipboard.writeText(txt).then(()=>toast('已复制。打开 AI 粘贴，再在最后写上你的问题。'),fallback);
+    navigator.clipboard.writeText(txt).then(()=>toast(tx('已复制。打开 AI 粘贴，再在最后写上你的问题。','Copied. Paste it into an AI chat and add your question at the end.')),fallback);
   }catch(e){fallback();}
 }
 
 /* ================= account & sync (Firebase, optional) ================= */
 const ACCT={fb:null,user:null,stats:null,pending:false,online:typeof navigator!=='undefined'?navigator.onLine!==false:true,unsub:null,err:'',tab:'login',msg:'',busy:false,isAdmin:false};
+const AUTH_ERR_EN={'auth/email-already-in-use':'This email is already registered; just log in.','auth/invalid-email':'That email address is not valid.','auth/missing-email':'Please enter your email first.','auth/weak-password':'The password needs at least 6 characters.','auth/missing-password':'Please enter a password.','auth/invalid-credential':'Wrong email or password.','auth/invalid-login-credentials':'Wrong email or password.','auth/wrong-password':'Wrong email or password.','auth/user-not-found':'This email is not registered yet.','auth/network-request-failed':'Cannot reach the server. Logging in and signing up need a connection; after logging in once, you can keep playing offline.','auth/too-many-requests':'Too many attempts. Please try again in a few minutes.'};
 const AUTH_ERR={'auth/email-already-in-use':'这个邮箱已经注册过了，直接登录就行。','auth/invalid-email':'邮箱格式不对。','auth/missing-email':'请先填写邮箱。','auth/weak-password':'密码至少要 6 位。','auth/missing-password':'请填写密码。','auth/invalid-credential':'邮箱或密码不对。','auth/invalid-login-credentials':'邮箱或密码不对。','auth/wrong-password':'邮箱或密码不对。','auth/user-not-found':'这个邮箱还没有注册。','auth/network-request-failed':'连不上服务器。登录和注册需要联网；登录过一次之后，离线也能继续用。','auth/too-many-requests':'尝试次数太多，请过几分钟再试。'};
-function authErr(e){return AUTH_ERR[e&&e.code]||('出错了：'+((e&&e.message)||e));}
+function authErr(e){return (LANG==='en'?AUTH_ERR_EN:AUTH_ERR)[e&&e.code]||(tx('出错了：','Something went wrong: ')+((e&&e.message)||e));}
 function fbReady(){const c=window.FIREBASE_CONFIG;return !!(window.firebase&&c&&c.apiKey&&!/填/.test(c.apiKey));}
 function fsInc(v){return firebase.firestore.FieldValue.increment(v);}
 function fsNow(){return firebase.firestore.FieldValue.serverTimestamp();}
 function toIncrements(o){const r={};for(const k in o){const v=o[k];if(v&&typeof v==='object'){const sub=toIncrements(v);if(Object.keys(sub).length)r[k]=sub;}else if(typeof v==='number'&&v)r[k]=fsInc(v);}return r;}
 function userRef(){return ACCT.fb.db.collection('users').doc(ACCT.user.uid);}
 function pushStats(d){
-  userRef().set({stats:toIncrements(d),lastActive:fsNow()},{merge:true}).catch(e=>{ACCT.err='保存失败：'+e.message;renderAccount();});
+  userRef().set({stats:toIncrements(d),lastActive:fsNow()},{merge:true}).catch(e=>{ACCT.err=tx('保存失败：','Saving failed: ')+e.message;renderAccount();});
 }
 function initAccount(){
   if(!fbReady())return;
@@ -1696,7 +1797,7 @@ function initAccount(){
     if(!firebase.apps.length)firebase.initializeApp(window.FIREBASE_CONFIG);
     const db=firebase.firestore();
     try{db.enablePersistence({synchronizeTabs:true}).catch(()=>{});}catch(e){}
-    const auth=firebase.auth();auth.languageCode='zh_CN';
+    const auth=firebase.auth();auth.languageCode=LANG==='en'?'en':LANG==='hk'?'zh_TW':'zh_CN';
     ACCT.fb={auth,db};
   }catch(e){console.warn('Firebase 初始化失败',e);return;}
   $('#acctBtn').hidden=false;
@@ -1712,7 +1813,7 @@ function initAccount(){
       ACCT.unsub=ref.onSnapshot({includeMetadataChanges:true},snap=>{
         const d=snap.data()||{};ACCT.stats=normStats(d.stats);ACCT.name=d.name||nm;ACCT.pending=snap.metadata.hasPendingWrites;
         renderStats();renderAccount();
-      },e=>{ACCT.err='读取账号数据失败：'+e.message;renderAccount();});
+      },e=>{ACCT.err=tx('读取账号数据失败：','Could not read your account data: ')+e.message;renderAccount();});
       ACCT.fb.db.collection('admins').doc(u.uid).get().then(a=>{ACCT.isAdmin=a.exists;renderAccount();}).catch(()=>{});
     }
     if(G.over&&P.length)G.handNo=curStats().hands+1;
@@ -1723,42 +1824,42 @@ function initAccount(){
   document.addEventListener('keydown',e=>{if(e.key==='Escape')$('#acctModal').hidden=true;});
 }
 function syncState(){
-  if(!ACCT.online)return{cls:'off',txt:ACCT.pending?'离线 · 待同步':'离线'};
-  if(ACCT.pending)return{cls:'busy',txt:'同步中'};
-  return{cls:'ok',txt:'已同步'};
+  if(!ACCT.online)return{cls:'off',txt:ACCT.pending?tx('离线 · 待同步','Offline · not synced'):tx('离线','Offline')};
+  if(ACCT.pending)return{cls:'busy',txt:tx('同步中','Syncing')};
+  return{cls:'ok',txt:tx('已同步','Synced')};
 }
 function guestPending(){try{return STATS.hands>0&&localStorage.getItem('gto9-guest-skip')!==ACCT.user.uid;}catch(e){return STATS.hands>0;}}
 function renderAccount(){
   if(!ACCT.fb)return;
   const btn=$('#acctBtn');
   if(ACCT.user){const s=syncState();btn.innerHTML=`<i class="dot ${s.cls}"></i><span>${esc(ACCT.name||ACCT.user.email)}</span><small>${s.txt}</small>`;}
-  else btn.innerHTML='<i class="dot none"></i><span>登录 / 注册</span><small>游客模式</small>';
+  else btn.innerHTML=`<i class="dot none"></i><span>${tx('登录 / 注册','Log in / Sign up')}</span><small>${tx('游客模式','Guest mode')}</small>`;
   const m=$('#acctSheet');if(!m||$('#acctModal').hidden)return;
-  let h='<button class="x" id="acctClose" aria-label="关闭">×</button>';
+  let h=`<button class="x" id="acctClose" aria-label="${tx('关闭','Close')}">×</button>`;
   if(ACCT.user){
     const s=syncState(),S=curStats();
-    const syncTxt=s.cls==='ok'?'所有记录都已上传到云端。':s.cls==='busy'?'正在上传记录…':'现在没有网络。你可以照常打牌，记录先保存在这台设备上，联网后会自动上传。';
-    h+=`<h2 id="acctTitle">我的账号</h2>
+    const syncTxt=s.cls==='ok'?tx('所有记录都已上传到云端。','All records are uploaded to the cloud.'):s.cls==='busy'?tx('正在上传记录…','Uploading records…'):tx('现在没有网络。你可以照常打牌，记录先保存在这台设备上，联网后会自动上传。','No connection right now. Keep playing as usual; records are saved on this device and upload automatically once you are online.');
+    h+=`<h2 id="acctTitle">${tx('我的账号','My account')}</h2>
     <div class="who"><b>${esc(ACCT.name||'')}</b><span>${esc(ACCT.user.email||'')}</span></div>
     <div class="syncrow"><i class="dot ${s.cls}"></i><div><b>${s.txt}</b><span>${syncTxt}</span></div></div>
-    <div class="mstats"><div><span>手数</span><b>${S.hands}</b></div><div><span>bb/100</span><b>${S.hands?(S.net/BB/S.hands*100).toFixed(1):'—'}</b></div><div><span>决策得分</span><b>${S.dec?Math.round(S.score/S.dec*100)+'%':'—'}</b></div></div>`;
-    if(guestPending())h+=`<div class="merge"><p>这台设备上还有 <b>${STATS.hands}</b> 手登录前的游客记录（盈亏 ${STATS.net>0?'+':''}${fmt(STATS.net)}bb）。要合并到这个账号吗？</p><div class="row"><button class="btn primary sm" id="mergeBtn">合并到账号</button><button class="btn ghost sm" id="skipBtn">不合并</button></div></div>`;
-    if(ACCT.pending)h+=`<p class="warn">还有记录没上传。建议联网同步完成后再退出登录，否则这些记录要等你下次在这台设备上登录同一账号时才会上传。</p>`;
+    <div class="mstats"><div><span>${tx('手数','Hands')}</span><b>${S.hands}</b></div><div><span>bb/100</span><b>${S.hands?(S.net/BB/S.hands*100).toFixed(1):'—'}</b></div><div><span>${tx('决策得分','Decision score')}</span><b>${S.dec?Math.round(S.score/S.dec*100)+'%':'—'}</b></div></div>`;
+    if(guestPending())h+=`<div class="merge"><p>${tx(`这台设备上还有 <b>${STATS.hands}</b> 手登录前的游客记录（盈亏 ${STATS.net>0?'+':''}${fmt(STATS.net)}bb）。要合并到这个账号吗？`,`This device has <b>${STATS.hands}</b> guest hands from before you logged in (net ${STATS.net>0?'+':''}${fmt(STATS.net)}bb). Merge them into this account?`)}</p><div class="row"><button class="btn primary sm" id="mergeBtn">${tx('合并到账号','Merge into account')}</button><button class="btn ghost sm" id="skipBtn">${tx('不合并','Don\'t merge')}</button></div></div>`;
+    if(ACCT.pending)h+=`<p class="warn">${tx('还有记录没上传。建议联网同步完成后再退出登录，否则这些记录要等你下次在这台设备上登录同一账号时才会上传。','Some records are not uploaded yet. Log out after syncing online; otherwise they upload only the next time you log in to the same account on this device.')}</p>`;
     if(ACCT.err)h+=`<p class="err">${esc(ACCT.err)}</p>`;
-    h+=`<div class="row">${ACCT.isAdmin?'<a class="btn ghost sm" href="admin.html">管理后台</a>':''}<button class="btn ghost sm" id="outBtn">退出登录</button></div>`;
+    h+=`<div class="row">${ACCT.isAdmin?`<a class="btn ghost sm" href="admin.html">${tx('管理后台','Admin')}</a>`:''}<button class="btn ghost sm" id="outBtn">${tx('退出登录','Log out')}</button></div>`;
   }else{
     const t=ACCT.tab;
-    h+=`<h2 id="acctTitle">${t==='signup'?'注册账号':t==='reset'?'找回密码':'登录'}</h2>`;
-    if(t!=='reset')h+=`<div class="tabs"><button class="${t==='login'?'on':''}" data-tab="login">登录</button><button class="${t==='signup'?'on':''}" data-tab="signup">注册</button></div>`;
+    h+=`<h2 id="acctTitle">${t==='signup'?tx('注册账号','Sign up'):t==='reset'?tx('找回密码','Reset password'):tx('登录','Log in')}</h2>`;
+    if(t!=='reset')h+=`<div class="tabs"><button class="${t==='login'?'on':''}" data-tab="login">${tx('登录','Log in')}</button><button class="${t==='signup'?'on':''}" data-tab="signup">${tx('注册','Sign up')}</button></div>`;
     h+=`<form id="authForm" novalidate>
-      ${t==='signup'?'<label for="inName">昵称<input id="inName" autocomplete="nickname" maxlength="20" placeholder="朋友们看到的名字"></label>':''}
-      <label for="inEmail">邮箱<input id="inEmail" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com"></label>
-      ${t!=='reset'?`<label for="inPass">密码<input id="inPass" type="password" autocomplete="${t==='signup'?'new-password':'current-password'}" placeholder="${t==='signup'?'至少 6 位':''}"></label>`:''}
+      ${t==='signup'?`<label for="inName">${tx('昵称','Nickname')}<input id="inName" autocomplete="nickname" maxlength="20" placeholder="${tx('朋友们看到的名字','The name your friends see')}"></label>`:''}
+      <label for="inEmail">${tx('邮箱','Email')}<input id="inEmail" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com"></label>
+      ${t!=='reset'?`<label for="inPass">${tx('密码','Password')}<input id="inPass" type="password" autocomplete="${t==='signup'?'new-password':'current-password'}" placeholder="${t==='signup'?tx('至少 6 位','At least 6 characters'):''}"></label>`:''}
       ${ACCT.err?`<p class="err">${esc(ACCT.err)}</p>`:''}${ACCT.msg?`<p class="ok">${esc(ACCT.msg)}</p>`:''}
-      <button class="btn primary" type="submit" ${ACCT.busy?'disabled':''}>${ACCT.busy?'请稍候…':t==='signup'?'注册并登录':t==='reset'?'发送重置邮件':'登录'}</button>
+      <button class="btn primary" type="submit" ${ACCT.busy?'disabled':''}>${ACCT.busy?tx('请稍候…','Please wait…'):t==='signup'?tx('注册并登录','Sign up and log in'):t==='reset'?tx('发送重置邮件','Send reset email'):tx('登录','Log in')}</button>
     </form>
-    <div class="row links">${t==='reset'?'<button class="lnk" data-tab="login">返回登录</button>':'<button class="lnk" data-tab="reset">忘记密码？</button>'}</div>
-    <p class="fine">登录后，你在任何设备上打的牌都会同步到这个账号。不登录也能玩，记录只保存在这台设备上。管理员可以看到账号的昵称、邮箱和牌局统计。</p>`;
+    <div class="row links">${t==='reset'?`<button class="lnk" data-tab="login">${tx('返回登录','Back to log in')}</button>`:`<button class="lnk" data-tab="reset">${tx('忘记密码？','Forgot password?')}</button>`}</div>
+    <p class="fine">${tx('登录后，你在任何设备上打的牌都会同步到这个账号。不登录也能玩，记录只保存在这台设备上。管理员可以看到账号的昵称、邮箱和牌局统计。','Once logged in, the hands you play on any device sync to this account. You can also play without logging in; records are then kept on this device only. The admin can see each account\'s nickname, email and stats.')}</p>`;
   }
   const keep={};['inName','inEmail','inPass'].forEach(id=>{const el=document.getElementById(id);if(el)keep[id]=el.value;});
   m.innerHTML=h;
@@ -1775,12 +1876,12 @@ async function onAuthSubmit(e){
   const v=id=>{const el=document.getElementById(id);return el?el.value.trim():'';};
   const email=v('inEmail'),pass=document.getElementById('inPass')?document.getElementById('inPass').value:'',name=v('inName');
   ACCT.err='';ACCT.msg='';
-  if(!email){ACCT.err='请填写邮箱。';return renderAccount();}
-  if(ACCT.tab==='signup'&&!name){ACCT.err='请填写昵称。';return renderAccount();}
+  if(!email){ACCT.err=tx('请填写邮箱。','Please enter your email.');return renderAccount();}
+  if(ACCT.tab==='signup'&&!name){ACCT.err=tx('请填写昵称。','Please enter a nickname.');return renderAccount();}
   ACCT.busy=true;renderAccount();
   const auth=ACCT.fb.auth;
   try{
-    if(ACCT.tab==='reset'){await auth.sendPasswordResetEmail(email);ACCT.msg='重置邮件已发送。去邮箱点开链接设置新密码（也看看垃圾邮件文件夹）。';}
+    if(ACCT.tab==='reset'){await auth.sendPasswordResetEmail(email);ACCT.msg=tx('重置邮件已发送。去邮箱点开链接设置新密码（也看看垃圾邮件文件夹）。','Reset email sent. Open the link in it to set a new password (check your spam folder too).');}
     else if(ACCT.tab==='signup'){
       const cred=await auth.createUserWithEmailAndPassword(email,pass);
       await cred.user.updateProfile({displayName:name});ACCT.name=name;
@@ -1795,14 +1896,14 @@ function esc(t){return String(t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;',
 function renderOppBtn(){
   const cnt={};for(const k of SETTINGS.styles)cnt[k]=(cnt[k]||0)+1;
   const pre=STYLE_PRESETS.find(([,a])=>a.join()===SETTINGS.styles.join());
-  $('#oppBtn').textContent=pre?pre[0]:STYLE_KEYS.filter(k=>cnt[k]).map(k=>`${STYLE_DEF[k].n}×${cnt[k]}`).join(' ');
+  $('#oppBtn').textContent=pre?tx(pre[0],PRESET_EN[STYLE_PRESETS.indexOf(pre)]):STYLE_KEYS.filter(k=>cnt[k]).map(k=>`${STYLE_DEF[k].n}×${cnt[k]}`).join(' ');
 }
 function renderOpp(){
   const el=$('#oppSheet');
-  let h=`<button class="x" id="oppClose" aria-label="关闭">×</button><h2 id="oppTitle">对手类型</h2>
-  <p class="fine">从下一手开始生效。GTO 建议和评分不会因为对手类型而改变；翻后胜率会按对手的类型估计他的范围，并给出剥削提示。</p>
-  <div class="row presets">${STYLE_PRESETS.map(([n],i)=>`<button class="pre${STYLE_PRESETS[i][1].join()===SETTINGS.styles.join()?' on':''}" data-p="${i}">${n}</button>`).join('')}<button class="pre" data-p="rand">随机</button></div>
-  <div class="opplist">${NAMES.slice(1).map((nm,i)=>`<label for="sty${i}"><span>${nm}</span><select id="sty${i}" data-i="${i}">${STYLE_KEYS.map(k=>`<option value="${k}"${SETTINGS.styles[i]===k?' selected':''}>${STYLE_DEF[k].full}</option>`).join('')}</select></label>`).join('')}</div>
+  let h=`<button class="x" id="oppClose" aria-label="${tx('关闭','Close')}">×</button><h2 id="oppTitle">${tx('对手类型','Opponent types')}</h2>
+  <p class="fine">${tx('从下一手开始生效。GTO 建议和评分不会因为对手类型而改变；翻后胜率会按对手的类型估计他的范围，并给出剥削提示。','Takes effect from the next hand. GTO advice and scoring do not change with opponent type; postflop equity estimates each opponent\'s range by his type and adds exploit tips.')}</p>
+  <div class="row presets">${STYLE_PRESETS.map(([n],i)=>`<button class="pre${STYLE_PRESETS[i][1].join()===SETTINGS.styles.join()?' on':''}" data-p="${i}">${tx(n,PRESET_EN[i])}</button>`).join('')}<button class="pre" data-p="rand">${tx('随机','Random')}</button></div>
+  <div class="opplist">${(LANG==='en'?NAMES_EN:NAMES).slice(1).map((nm,i)=>`<label for="sty${i}"><span>${nm}</span><select id="sty${i}" data-i="${i}">${STYLE_KEYS.map(k=>`<option value="${k}"${SETTINGS.styles[i]===k?' selected':''}>${cap(STYLE_DEF[k].full)}</option>`).join('')}</select></label>`).join('')}</div>
   <dl class="styd">${STYLE_KEYS.map(k=>`<div><dt><span class="sty sty-${k}">${STYLE_DEF[k].n}</span></dt><dd>${STYLE_DEF[k].d}</dd></div>`).join('')}</dl>`;
   el.innerHTML=h;
   $('#oppClose').onclick=()=>{$('#oppModal').hidden=true;};
@@ -1815,8 +1916,13 @@ function renderOpp(){
 
 /* ================= version & changelog ================= */
 // Newest first. Each update: bump APP_VERSION and add an entry at the top.
-const APP_VERSION='1.6.1';
+const APP_VERSION='1.7.0';
 const CHANGELOG=[
+  {v:'1.7.0',date:'2026-11-17',items:[
+    ['新增','语言切换：简体中文 / 繁體中文 / English，在顶部"语言 · Language"里选。界面、每一步的建议和理由、尺度解释、复盘、"复制这手牌，问 AI"的文字、更新记录都有对应语言。第一次打开时按设备语言自动选择（香港、台湾设备默认繁體），以后记住你的选择。'],
+    ['改进','繁體中文按香港用字转换（例如 籌碼、棄牌、範圍）。'],
+    ['改进','切换语言后，当前的建议会立刻换成新语言；牌局记录里已经发生的动作保留原来的语言。']
+  ]},
   {v:'1.6.1',date:'2026-11-17',items:[
     ['修复','多人底池里卡顺（只有 4 张补牌的听牌）不再加隐含赔率。例如第 3 手：A5 在 4 T 2 7 上卡 3 的顺子，三人底池、河牌还要先行动，中了常常只是小的那一端顺子或一对 A。以前加了隐含赔率后建议跟注 100%，现在是跟注和弃牌混合，以弃牌为主。单挑时卡顺仍然计入隐含赔率。'],
     ['改进','多人底池的胜率一直是同时对所有对手计算的，但以前只写"对对手估计范围的胜率"，看起来像只算了一个人。现在会写明"同时对 2 个对手（谁、谁）"。']
@@ -1921,18 +2027,125 @@ const CHANGELOG=[
     ['新增','每一步的 GTO 建议、翻前范围矩阵、翻后胜率分析和本手复盘。']
   ]}
 ];
+const CHANGELOG_EN={
+"1.7.0":["Language switch: 简体中文 / 繁體中文 / English, chosen under \"语言 · Language\" at the top. The interface, the advice and reasons at every step, the sizing explanations, the review, the \"copy this hand to ask an AI\" text and the changelog all follow the language. On first launch it follows your device language (Hong Kong and Taiwan devices default to 繁體) and remembers your choice after that.", "繁體中文 uses Hong Kong character forms (for example 籌碼, 棄牌, 範圍).", "After switching language, the current advice changes language straight away; actions already in the hand log keep the language they were written in."],
+"1.6.1": [
+"Gutshots (draws with only 4 outs) no longer get implied odds in multiway pots. Example, hand #3: A5 on 4 T 2 7 needs a 3; in a 3-way pot, acting first on the river, hitting often gives only the low end of a straight or a pair of aces. With implied odds the advice was call 100%; now it mixes calls and folds, mostly folding. Heads-up, gutshots still count implied odds.",
+"Multiway equity was always computed against every opponent at once, but the label said only \"equity vs the opponent's estimated range\", which looked like one player. It now names them: \"vs 2 opponents (who, who)\"."
+],
+"1.6.0": [
+"Value betting used to judge who is ahead by hand labels: every opponent \"strong (two pair+)\" hand counted as better than yours. On paired boards that goes badly wrong. Example, hand #247: board A5 7 A 8, you hold AQ (trips aces), and his A2–AJ are also \"trips aces\"; they all counted as better, so the advice was to check. Now every hand in his range is compared with yours directly, and only hands that really beat you count (here only AK, full houses and straights).",
+"Around 90% equity the advice used to jump between \"bet\" and \"check\" (strong hands only counted as worse above 90%). Comparing hands directly removes that cliff.",
+"The size table showed numbers above 100% such as \"wins 365% / 829% less value\": the ratio breaks down when the best size earns almost nothing. It now shows at most 99%, and says so directly when a bet loses money.",
+"In the post-hand review, the size box title used the final pot, giving \"why 17% of the pot\" while the table recommended 25%. The title now uses the pot at the time of the decision."
+],
+"1.5.9": [
+"Approximate preflop spots (for example facing an isolation raise after limps) counted equity against the raiser only and missed the players who had already called. Example, hand #9: with 4 players already in, J4o was given 27% heads-up equity and a call; against 5 opponents at once it has about 6%, and the advice is now fold.",
+"\"After calling only 3x the pot is left behind, so nearly all equity is realised\" applies heads-up only. Multiway, weak hands rarely reach showdown; that adjustment is no longer applied there, and the reasons say so."
+],
+"1.5.8": [
+"Used an open-source solver (postflop-solver) as a referee to check the heads-up postflop hands discussed so far, and corrected the advice and the regression test bank to match it.",
+"Preflop aggressor with the nuts on the flop (for example AA on A64 in a 3-bet pot): the advice used to slowplay half the time; the solver almost always bets small with its range. Now it bets about 90%.",
+"Gutshots folded too much to check-raises (for example 54s on A93): the solver calls 100%. Gutshots now count implied odds.",
+"Small pairs folded too much to check-raises: the solver calls about half the time with 55. Unpaired high cards still mostly fold.",
+"On delayed c-bets, ace-high without a draw used to bluff often: ace-high has showdown value and the solver basically checks. Now it mostly checks.",
+"Second barrels on the turn in 3-bet pots were too rare: the preflop raiser's range advantage is bigger there, so it now bets more."
+],
+"1.5.7": [
+"In approximate spots, the line \"for comparison, against a standard raise…\" also appeared when the opponent had used a standard size."
+],
+"1.5.6": [
+"Opponents' c-betting ranges were estimated too strong (treated like any bet): the preflop raiser's c-bets, turn barrels, ordinary bets and raises are now estimated separately. Example: BB with 55 facing a 33% c-bet is now advised to call.",
+"The previous version's equity-realisation discount was too harsh: it now scales with bet size, barely discounting against small bets and discounting more against big bets and raises; top pair and overpairs are not discounted.",
+"Borderline spots now get mixed frequencies instead of a flat 100% fold or call. Occasionally picking the other side is rated \"Deviation\", not \"Mistake\".",
+"New regression test bank: before every update, the hands discussed so far (21 checks) are re-run automatically to make sure the advice has not regressed."
+],
+"1.5.5": [
+"Opponents' raises (check-raises especially) were estimated too weak: raises now use a stronger, more polarised range (value hands plus bluffs with draws, very little pure air).",
+"Facing a bet, only this street's pot odds were used: hands that rarely improve, like small pairs and unpaired high cards, now have their equity discounted for how much they can realise when more bets are likely to follow. Example: 55 on A93 facing a check-raise is now a fold.",
+"The reasons show both the raw and the discounted equity; the MDF note now says it applies to the whole range, not to each hand."
+],
+"1.5.4": [
+"After the flop checked through, the program thought the preflop raiser had lost the initiative: it now keeps the initiative until someone bets.",
+"Turn \"delayed c-bets\": when the flop checks through and the opponent checks the turn again, the preflop raiser bets often, and the reasons explain that two checks make his range weak.",
+"Turn \"second barrels\": after a flop bet is called, whether to keep betting now depends on whom the turn card helps (high cards help the raiser, connecting and flush cards help the caller) and whether your hand can improve."
+],
+"1.5.3": [
+"Opponents' betting ranges ignored bet size: big bets (near or above pot) are now treated as polarised (more strong hands and draws, fewer medium hands), small bets as wider.",
+"Facing an overbet, hands like top pair good kicker were advised to raise: now they mostly call and raising needs a stronger hand.",
+"Value bets counted only what worse hands pay, not what you lose when better hands call: with a flush or straight completed on the river, top pair was still advised to bet 75%. Such medium-strong hands now mostly check or bet small."
+],
+"1.5.2": [
+"Value bet sizing looked only at your own hand: high equity meant \"geometric sizing to get the stacks in\", regardless of how much of his range could call (for example AA on A64 was advised 64%, and even a 124% overbet on the turn).",
+"Value bet sizing is now worked out from the opponent's estimated range: how much each part of it calls and for how many streets, planned street by street (for example a medium size on the turn, then all-in against his strong hands on the river). The size table shows how much value each size gives up.",
+"The nuts slowplay more on dry boards; if your hand blocks his top pair (for example AA on an ace-high board), the reasons say so.",
+"Facing a river bet with close to the nuts, raise pot-sized rather than a fixed 3x."
+],
+"1.5.1": [
+"LJ, HJ and CO flatted opens too much and 3-bet too little (for example HJ AQo was a pure call): players are still behind them, so they now mostly 3-bet or fold; the button keeps more flats.",
+"Flop c-bets ignored who was the preflop aggressor and who had the range advantage: in 3-bet pots and on dry high-card boards the aggressor now c-bets small and often, and the reasons say whether this hand has overcards and backdoor draws.",
+"Low two-tone boards like 8-4-2 were judged \"wet\".",
+"C-bet size in 3-bet pots changed to about 25%.",
+"When the turn aggressor gave up a bluff, the reason wrongly said \"no initiative\"."
+],
+"1.5.0": [
+"One-tap copy of a hand: the action, the program's advice and reasons at every step, and your choices, laid out as a question you can paste straight into an AI.",
+"Rock (tight-passive) AI: plays few hands, rarely raises, gives up when it misses, and is scared when raised.",
+"Hand-specific preflop exploit tips: facing an open from a non-GTO player, the hand's equity against his actual range is compared with its equity against a GTO range, and a clear difference suggests calling, 3-betting or folding more.",
+"A squeeze after callers was misread as a non-standard 3-bet, and hands like QQ were advised to fold.",
+"AKo folded too much facing an open plus a 3-bet.",
+"Facing small bets postflop, good hands like top pair folded half the time: the calling threshold now scales with the bet size.",
+"Multiway, air and weak draws bluffed and even shoved: the more players, the fewer bluffs now.",
+"Contradictory sizing reasons in multiway pots.",
+"Approximate spots such as isolation raises after limps: multiway equity is adjusted for how many players are expected to come along, favouring suited hands and pocket pairs; when calling leaves you nearly all-in, equity is treated as almost fully realised.",
+"Small blind defence against opens widened, closer to solver results (mostly 3-bets).",
+"Tuned after an audit of 15,000 self-play hands: the equity shown in the panel is on average within 4 percentage points of the real equity."
+],
+"1.4.1": [
+"Beginner AI was absurd postflop: it called down to the river with nothing, even against pot-sized bets, and took random actions postflop.",
+"Beginners and calling stations now \"call with any piece\": very wide with pairs and draws, but with nothing they mostly give up by the turn or river, more so against bigger bets.",
+"Beginner AI rarely raises now: it plays many hands, but mostly limps and calls."
+],
+"1.4.0": [
+"Preflop treated an isolation raise after limps as a normal open and used the wrong chart (for example, after 3 limps and a BTN raise to 8bb, J8o was advised to call).",
+"The big opens (6–10bb) and non-standard 3-bets and 4-bets common from AI in home games were treated as standard sizes.",
+"Preflop spots are now classified first: unopened, limped pot, facing an open, facing an isolation raise, facing a 3-bet, facing a 4-bet.",
+"Spots without a standard chart use an approximate model based on pot odds, position and the players still to act, clearly labelled.",
+"Approximate spots are not counted in the GTO score and show \"not scored\" in the review, so correct folds are no longer rated as deviations."
+],
+"1.3.0": [
+"Opponent types: each seat can be GTO, TAG, LAG, Nit, Calling station or Beginner, plus presets such as Home game.",
+"Exploit tips: how to deviate from GTO against each type (does not affect your score).",
+"Bet size explanations: why this size, compared with 33% / 50% / 75% / pot / overbet.",
+"In the desktop offline version, the hidden login window covered the whole page."
+],
+"1.2.0": [
+"Accounts: records sync across devices; play offline as usual and records upload once you are online.",
+"Stats: bb/100, VPIP, PFR, scores by street and by position, and mistake types.",
+"Admin page: every player's stats and mistake analysis."
+],
+"1.1.0": [
+"The action bar shows whether your last move was right, so on a phone you do not need to scroll down.",
+"In live mode the action bar adds a GTO frequency bar."
+],
+"1.0.0": [
+"9-handed play against AI, 100bb every hand, played out to the river.",
+"GTO advice at every step, preflop range matrix, postflop equity analysis and a hand review."
+]
+};
 function verCmp(a,b){const x=String(a).split('.').map(Number),y=String(b).split('.').map(Number);for(let i=0;i<3;i++){if((x[i]||0)!==(y[i]||0))return(x[i]||0)-(y[i]||0);}return 0;}
+const CL_TYPE_EN={'修复':'Fix','新增':'New','改进':'Improved'};
 function changelogHTML(list){
-  return list.map(e=>`<section class="cl"><h3>v${e.v} <small>${e.date}</small></h3><ul>${e.items.map(([t,x])=>`<li><span class="clt clt-${t==='修复'?'fix':t==='新增'?'new':'imp'}">${t}</span><span>${x}</span></li>`).join('')}</ul></section>`).join('');
+  return list.map(e=>`<section class="cl"><h3>v${e.v} <small>${e.date}</small></h3><ul>${e.items.map(([t,x],i)=>`<li><span class="clt clt-${t==='修复'?'fix':t==='新增'?'new':'imp'}">${tx(t,CL_TYPE_EN[t])}</span><span>${LANG==='en'&&CHANGELOG_EN[e.v]&&CHANGELOG_EN[e.v][i]?CHANGELOG_EN[e.v][i]:x}</span></li>`).join('')}</ul></section>`).join('');
 }
 function showChangelog(sinceVersion){
   const fresh=sinceVersion?CHANGELOG.filter(e=>verCmp(e.v,sinceVersion)>0):CHANGELOG;
   const isUpdate=!!sinceVersion;
-  $('#verSheet').innerHTML=`<button class="x" id="verClose" aria-label="关闭">×</button>
-    <h2 id="verTitle">${isUpdate?`已更新到 v${APP_VERSION}`:'更新记录'}</h2>
-    ${isUpdate?`<p class="fine">上次在这台设备上打开的是 v${esc(sinceVersion)}，这之后的改动：</p>`:`<p class="fine">当前版本 v${APP_VERSION}</p>`}
+  $('#verSheet').innerHTML=`<button class="x" id="verClose" aria-label="${tx('关闭','Close')}">×</button>
+    <h2 id="verTitle">${isUpdate?tx(`已更新到 v${APP_VERSION}`,`Updated to v${APP_VERSION}`):tx('更新记录','Changelog')}</h2>
+    ${isUpdate?`<p class="fine">${tx(`上次在这台设备上打开的是 v${esc(sinceVersion)}，这之后的改动：`,`Last time this device opened v${esc(sinceVersion)}. Changes since then:`)}</p>`:`<p class="fine">${tx('当前版本','Current version')} v${APP_VERSION}</p>`}
     <div class="cls">${changelogHTML(fresh)}</div>
-    <div class="row">${isUpdate&&fresh.length<CHANGELOG.length?'<button class="btn ghost sm" id="verAll">查看全部更新记录</button>':''}<button class="btn primary sm" id="verOk">知道了</button></div>`;
+    <div class="row">${isUpdate&&fresh.length<CHANGELOG.length?`<button class="btn ghost sm" id="verAll">${tx('查看全部更新记录','See the full changelog')}</button>`:''}<button class="btn primary sm" id="verOk">${tx('知道了','Got it')}</button></div>`;
   $('#verModal').hidden=false;
   const close=()=>{$('#verModal').hidden=true;};
   $('#verClose').onclick=close;$('#verOk').onclick=close;
@@ -1952,7 +2165,45 @@ function initVersion(){
 }
 
 /* ================= boot ================= */
+/* ---- language switching ---- */
+/*HK_TABLE (generated with OpenCC s2hk from the text in this file; regenerate after adding Chinese text)*/
+const HK_C=(()=>{const s="万萬业業两兩个個为為么麼义義习習于於亏虧云雲从從们們价價优優会會传傳伦倫体體余餘关關内內册冊写寫决決准準几幾凶兇划劃则則别別剥剝务務动動势勢单單占佔压壓双雙发發变變号號后後吗嗎听聽启啓员員响響围圍坚堅处處备備复復够夠头頭夹夾实實审審宽寬对對尔爾尝嘗属屬带帶帮幫干幹并並庄莊库庫应應开開弃棄张張强強归歸当當录錄总總愿願扑撲护護择擇挡擋挤擠损損换換据據摊攤数數断斷无無时時昵暱显顯机機权權条條来來杰傑极極构構枪槍标標栏欄样樣检檢槛檻气氣没沒测測润潤游遊湾灣湿濕满滿点點独獨现現电電盖蓋盘盤码碼确確离離种種称稱筹籌签籤简簡类類紧緊约約级級纯純线線练練经經结結给給络絡统統继繼续續综綜缘緣网網职職联聯胜勝脑腦脚腳芦蘆范範荐薦获獲虑慮虽雖补補见見规規计計认認讨討让讓训訓议議记記论論设設评評识識诈詐诉訴试試话話该該语語误誤说説请請读讀谁誰调調谱譜败敗账賬货貨贴貼贵貴费費赔賠赚賺赢贏转轉轮輪较較输輸边邊过過还還这這进進连連迟遲适適选選邮郵释釋里裏针針钟鍾钮鈕钱錢铺鋪链鏈错錯键鍵长長门門闭閉问問间間阵陣际際险險随隨隐隱难難页頁顶頂项項顺順须須顾顧预預领領频頻题題额額风風验驗",m={};for(let i=0;i<s.length;i+=2)m[s[i]]=s[i+1];return m;})();
+const HK_P={"加":[["加注弃","加註棄"],["加注者","加註者"],["加注时","加註時"],["加注范","加註範"],["加注之","加註之"],["加注到","加註到"],["加注和","加註和"],["加注要","加註要"],["加注等","加註等"],["加注分","加註分"],["加注基","加註基"],["加注才","加註才"],["加注就","加註就"],["加注了","加註了"],["加注拿","加註拿"],["加注或","加註或"],["加注几","加註幾"],["加注的","加註的"],["加注现","加註現"],["加注多","加註多"],["加注方","加註方"],["加注约","加註約"],["加注隔","加註隔"],["加注需","加註需"],["加注","加註"]],"复":[["复制没","複製沒"],["复制这","複製這"],["复盘","覆盤"],["复制","複製"]],"干":[["干燥","乾燥"]],"跟":[["跟注标","跟註標"]],"标":[["标注","標註"]],"动":[["动复制","動複製"]],"要":[["要克制","要剋制"]],"合":[["合并到","合併到"]],"多":[["多只剩","多隻剩"]],"在":[["在干燥","在乾燥"]],"增":[["增回归","增迴歸"]],"注":[["注册","註冊"]],"后":[["后复盘","後覆盤"]],"和":[["和回归","和迴歸"],["和注册","和註冊"]],"有":[["有注册","有註冊"]],"的":[["的干燥","的乾燥"]],"面":[["面干燥","面乾燥"]],"已":[["已复制","已複製"]],"键":[["键复制","鍵複製"]],"经":[["经注册","經註冊"]],"手":[["手复盘","手覆盤"]],"分":[["分钟再","分鐘再"]],"阿":[["阿杰","阿杰"]],"翻":[["翻后加注也在为后面的街铺路","翻後加注也在為後面的街鋪路"]]};
+function HK(s){
+  if(!s)return s;let o='',i=0;
+  while(i<s.length){const c=s[i],L=HK_P[c];let hit=false;
+    if(L)for(const [a,b] of L){if(s.startsWith(a,i)){o+=b;i+=a.length;hit=true;break;}}
+    if(!hit){o+=HK_C[c]||c;i++;}}
+  return o;
+}
+function hkNode(n){
+  if(n.nodeType===3){const v=n.nodeValue;if(/[\u4e00-\u9fff]/.test(v)){const w=HK(v);if(w!==v)n.nodeValue=w;}return;}
+  if(n.nodeType!==1||n.tagName==='SCRIPT'||n.tagName==='STYLE')return;
+  for(const a of ['title','placeholder','aria-label']){const v=n.getAttribute(a);if(v&&/[\u4e00-\u9fff]/.test(v)){const w=HK(v);if(w!==v)n.setAttribute(a,w);}}
+  for(const c of n.childNodes)hkNode(c);
+}
+// in 繁體 mode every piece of text the page shows is converted as it appears
+if(typeof MutationObserver!=='undefined')new MutationObserver(ms=>{if(LANG!=='hk')return;for(const m of ms){if(m.type==='characterData')hkNode(m.target);else m.addedNodes.forEach(hkNode);}})
+  .observe(document.body,{subtree:true,childList:true,characterData:true});
+function applyLang(){
+  document.documentElement.lang=LANG==='en'?'en':LANG==='hk'?'zh-HK':'zh-CN';
+  document.title=LANG==='hk'?HK('德扑 GTO 训练台'):tx('德扑 GTO 训练台','Poker GTO Trainer');
+  document.querySelectorAll('[data-en]').forEach(el=>{if(el.dataset.zh==null)el.dataset.zh=el.innerHTML;el.innerHTML=LANG==='en'?el.dataset.en:el.dataset.zh;});
+  document.querySelectorAll('[data-en-title]').forEach(el=>{if(el.dataset.zhTitle==null)el.dataset.zhTitle=el.title;el.title=LANG==='en'?el.dataset.enTitle:el.dataset.zhTitle;});
+  document.querySelectorAll('[data-en-aria]').forEach(el=>{if(el.dataset.zhAria==null)el.dataset.zhAria=el.getAttribute('aria-label');el.setAttribute('aria-label',LANG==='en'?el.dataset.enAria:el.dataset.zhAria);});
+  if(LANG==='hk'&&document.body)hkNode(document.body);
+}
+function setLang(v){
+  LANG=v;try{localStorage.setItem('gto9-lang',v);}catch(e){}
+  if(ACCT.fb)ACCT.fb.auth.languageCode=LANG==='en'?'en':LANG==='hk'?'zh_TW':'zh_CN';
+  applyLang();renderOppBtn();
+  // the advice on screen is rebuilt in the new language; the hand log keeps the language it was written in
+  if(P.length&&G.toAct===0&&!G.over){G.cur=computeAdvice(0,3000,true);}
+  if(P.length)render();renderAccount();
+  if(!$('#oppModal').hidden)renderOpp();
+}
 function initSettings(){
+  const sl=$('#setLang');sl.value=LANG;sl.onchange=()=>setLang(sl.value);applyLang();
   const sp=$('#setPos'),sm=$('#setMode'),ss=$('#setSpeed');
   sp.value=SETTINGS.pos;sm.value=SETTINGS.mode;ss.value=SETTINGS.speed;
   sp.onchange=()=>{SETTINGS.pos=sp.value;save('gto9-settings',SETTINGS);};
